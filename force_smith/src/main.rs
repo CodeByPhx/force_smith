@@ -10,6 +10,20 @@ pub struct Config {
     ideal_edge_len: f32,
     cooling_fn: fn(temperature: f32) -> f32,
 }
+
+impl Config {
+    pub fn new(
+        temperature: f32,
+        ideal_edge_len: f32,
+        cooling_fn: fn(temperature: f32) -> f32,
+    ) -> Self {
+        Self {
+            temperature,
+            ideal_edge_len,
+            cooling_fn,
+        }
+    }
+}
 impl Default for Config {
     fn default() -> Self {
         Self {

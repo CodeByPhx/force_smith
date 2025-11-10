@@ -34,6 +34,7 @@ impl From<&crate::utils::vec2::Vec2> for Vec2 {
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct LayoutConfigResource(HashMap<String, Parameter>);
+#[derive(Debug)]
 pub enum Parameter {
     Float(f32),
     Bool(bool),

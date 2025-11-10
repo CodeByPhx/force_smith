@@ -65,6 +65,7 @@ impl<Vertex, Edge, Context>
 }
 
 /// Stores intermediate displacement vectors computed during layout iteration.
+#[derive(Default)]
 pub struct Displacements(pub Vec<Vec2>);
 impl std::ops::Deref for Displacements {
     type Target = Vec<Vec2>;
@@ -81,11 +82,6 @@ impl std::ops::DerefMut for Displacements {
 impl Displacements {
     pub fn fill_zero_sized(len: usize) -> Self {
         Self(vec![Vec2::ZERO; len])
-    }
-}
-impl Default for Displacements {
-    fn default() -> Self {
-        Self(Default::default())
     }
 }
 impl From<Vec<Vec2>> for Displacements {

@@ -36,10 +36,10 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
 
                 if include {
                     param_entries.push(quote! {
-                        map.insert(#param_name.to_string(), self.#field_name.to_parameter());
+                        map.insert(#param_name.to_string(), ::force_smith::prelude::ToParameter::to_parameter(&self.#field_name));
                     });
                     param_updates.push(quote! {
-                        if let Some(val) = parameters.get(#param_name).and_then(|param| <_ as FromParameter>::from_parameter(param)) {
+                        if let Some(val) = parameters.get(#param_name).and_then(|param| <_ as ::force_smith::prelude::FromParameter>::from_parameter(param)) {
                             self.#field_name = val;
                         }
                     });
@@ -49,7 +49,7 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
     }
 
     let expanded = quote! {
-        impl Parameterized for #struct_name {
+        impl ::force_smith::prelude::Parameterized for #struct_name {
             fn get_parameters(&self) -> std::collections::HashMap<String, Parameter> {
                 let mut map = std::collections::HashMap::new();
                 #(#param_entries)*
