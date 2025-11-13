@@ -50,13 +50,13 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl ::force_smith::prelude::Parameterized for #struct_name {
-            fn get_parameters(&self) -> std::collections::HashMap<String, Parameter> {
+            fn get_parameters(&self) -> std::collections::HashMap<String, ::force_smith::prelude::Parameter> {
                 let mut map = std::collections::HashMap::new();
                 #(#param_entries)*
                 map
             }
 
-            fn update_parameters(&mut self, parameters: &std::collections::HashMap<String, Parameter>) {
+            fn update_parameters(&mut self, parameters: &std::collections::HashMap<String, ::force_smith::prelude::Parameter>) {
                 #(#param_updates)*
             }
         }

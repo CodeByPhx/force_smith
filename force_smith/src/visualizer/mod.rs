@@ -1,7 +1,11 @@
-use std::{collections::HashMap, fs, path::Path, time::Duration};
+use std::{collections::HashMap, fmt::format, fs, path::Path, time::Duration};
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
-use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
+use bevy_egui::{
+    EguiContexts, EguiPlugin, EguiPrimaryContextPass,
+    egui::{self, Ui},
+};
+use rand::Rng;
 
 use crate::layout::{LayoutAlgorithm, types::BaseGraph};
 
@@ -112,32 +116,51 @@ pub fn visualize(layout: Box<dyn VisualLayoutAlgorithm>) {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(EguiPlugin::default())
-        .insert_resource(GraphSourceUIContext::default())
+        .insert_resource(GraphSourceUiContext::default())
         .insert_non_send_resource(LayoutResource::from(layout))
         .insert_resource(LayoutConfigResource::from(parameters))
         .insert_resource(NodeMovementSpeed(10.0))
         .add_message::<NewGraph>()
+        .add_message::<LoadGraph>()
+        .add_message::<GenerateGraph>()
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                // load_graph_from_file.run_if(on_timer(Duration::from_secs(5))),
-                update_source_graph_dirs.run_if(on_timer(Duration::from_secs(5))),
-                load_ui_nodes.after(load_graph_from_file),
-                update_layout_config
-                    .run_if(resource_changed::<LayoutConfigResource>)
-                    .before(iterate_layout),
-                update_layout_graph
-                    .after(load_graph_from_file)
-                    .before(iterate_layout),
-                iterate_layout,
-                update_destinations.after(iterate_layout),
-                move_nodes.after(update_destinations),
-            ),
+                (generate_graph, load_graph_from_file).in_set(NewGraphSet),
+                (load_ui_nodes, update_layout_graph)
+                    .in_set(InsertNewGraphSet)
+                    .after(NewGraphSet),
+                update_source_graph_dirs.run_if(on_timer(Duration::from_secs(1))),
+                update_layout_config.run_if(resource_changed::<LayoutConfigResource>),
+            )
+                .in_set(ConfigurationSet),
         )
+        // .add_systems(
+        //     Update,
+        //     (
+        //         iterate_layout,
+        //         update_destinations.after(iterate_layout),
+        //         move_nodes.after(update_destinations),
+        //     )
+        //         .in_set(UpdateSet)
+        //         .after(ConfigurationSet),
+        // )
         .add_systems(EguiPrimaryContextPass, (config_ui, graph_source_ui))
         .run();
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct ConfigurationSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct NewGraphSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct InsertNewGraphSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct UpdateSet;
 
 #[derive(Bundle, Default)]
 pub struct NodeBundle {
@@ -184,32 +207,57 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn load_graph_from_file(mut ev_new_graph: MessageWriter<NewGraph>) {
-    let path = "./graphs/graph1.json";
-    let content = std::fs::read_to_string(path).unwrap();
-    let new_graph: BaseGraph = serde_json::from_str(&content).unwrap();
-
-    ev_new_graph.write(NewGraph(new_graph));
-}
-
-#[derive(Resource)]
-pub struct GraphSourceUIContext {
-    selected_file: Option<String>,
-    files: Vec<String>,
-    path: String,
-}
-
-impl Default for GraphSourceUIContext {
-    fn default() -> Self {
-        Self {
-            selected_file: Default::default(),
-            files: Default::default(),
-            path: "./graphs/".to_string(),
-        }
+fn load_graph_from_file(
+    mut ev_load_graph: MessageReader<LoadGraph>,
+    mut ev_new_graph: MessageWriter<NewGraph>,
+) {
+    if let Some(LoadGraph { path }) = ev_load_graph.read().last() {
+        let content = std::fs::read_to_string(path).unwrap();
+        let new_graph: BaseGraph = serde_json::from_str(&content).unwrap();
+        ev_new_graph.write(NewGraph(new_graph));
     }
 }
 
-fn update_source_graph_dirs(mut graph_source_context: ResMut<GraphSourceUIContext>) {
+fn generate_graph(
+    mut ev_generate_graph: MessageReader<GenerateGraph>,
+    mut ev_new_graph: MessageWriter<NewGraph>,
+) {
+    if let Some(GenerateGraph {
+        vertices: vertex_count,
+        edges: edge_count,
+        connected,
+    }) = ev_generate_graph.read().last()
+    {
+        use crate::utils::vec2::Vec2;
+        let vertices: Vec<Vec2> = vec![Vec2::ZERO; *vertex_count];
+        let mut edges: Vec<(usize, usize)> = Vec::with_capacity(*edge_count);
+        let mut rng = rand::rng();
+        if *connected {
+            let mut connected_vertices: Vec<usize> = Vec::with_capacity(*vertex_count);
+            connected_vertices.push(1);
+            let mut disconnected_vertices: Vec<usize> = (1..*vertex_count).collect();
+            while !disconnected_vertices.is_empty() {
+                let disconnected_idx = rng.random_range(0..disconnected_vertices.len());
+                let connected_idx = rng.random_range(0..connected_vertices.len());
+                disconnected_vertices.swap_remove(disconnected_idx);
+                connected_vertices.push(disconnected_idx);
+                edges.push((connected_idx, disconnected_idx));
+            }
+        }
+        while edges.len() < *edge_count {
+            let from_idx = rng.random_range(0..vertices.len());
+            let mut to_idx = rng.random_range(0..vertices.len());
+            if to_idx == from_idx {
+                to_idx = (to_idx + 1) % vertices.len();
+            }
+            edges.push((from_idx, to_idx));
+        }
+        ev_new_graph.write(NewGraph(BaseGraph { vertices, edges }));
+        info!("Generated Graph");
+    }
+}
+
+fn update_source_graph_dirs(mut graph_source_context: ResMut<GraphSourceUiContext>) {
     let mut file_names: Vec<String> = Vec::new();
 
     if let Ok(entries) = fs::read_dir(graph_source_context.path.clone()) {
@@ -236,26 +284,124 @@ fn update_source_graph_dirs(mut graph_source_context: ResMut<GraphSourceUIContex
     graph_source_context.files = file_names;
 }
 
-fn graph_source_ui(
-    mut contexts: EguiContexts,
-    mut graph_source_context: ResMut<GraphSourceUIContext>,
+fn up_down_arrow_buttons_usize(
+    value: &mut usize,
+    ui: &mut Ui,
+    min: Option<usize>,
+    max: Option<usize>,
 ) {
-    warn!("Files are {:?}", graph_source_context.files);
-    if let Ok(context) = contexts.ctx_mut() {
-        egui::Window::new("Source Graph").show(context, |ui| {
+    let min = min.unwrap_or(0);
+    let max = max.unwrap_or(usize::MAX);
+    if *value < min {
+        *value = min;
+    }
+    if *value > max {
+        *value = max;
+    }
+    ui.horizontal(|ui| {
+        if ui.button("-").clicked() && *value > min {
+            *value -= 1;
+        }
+        ui.label(value.to_string());
+        if ui.button("+").clicked() && *value < max {
+            *value += 1;
+        }
+    });
+}
+
+#[derive(Message)]
+struct GenerateGraph {
+    vertices: usize,
+    edges: usize,
+    connected: bool,
+}
+#[derive(Message)]
+struct LoadGraph {
+    path: String,
+}
+
+#[derive(Resource)]
+struct GraphSourceUiContext {
+    path: String,
+    files: Vec<String>,
+    selected_file: Option<String>,
+    vertices: usize,
+    edges: usize,
+    connected: bool,
+    current_selection: Option<String>,
+}
+impl Default for GraphSourceUiContext {
+    fn default() -> Self {
+        Self {
+            path: String::from("./graphs/"),
+            files: Vec::new(),
+            selected_file: None,
+            vertices: 3,
+            edges: 2,
+            connected: true,
+            current_selection: None,
+        }
+    }
+}
+
+fn graph_source_ui(
+    mut ui_ctx: EguiContexts,
+    mut ctx: ResMut<GraphSourceUiContext>,
+    mut ev_generate_graph: MessageWriter<GenerateGraph>,
+    mut ev_load_graph: MessageWriter<LoadGraph>,
+) {
+    if let Ok(context) = ui_ctx.ctx_mut() {
+        egui::Window::new("Graph Configuration").show(context, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                for file in graph_source_context.files.clone() {
+                if let Some(selection) = &ctx.current_selection {
+                    ui.colored_label(egui::Color32::from_rgb(255, 0, 0), selection.clone());
+                }
+                ui.heading("Generate Graph");
+                ui.horizontal(|ui| {
+                    ui.label("Vertices");
+                    up_down_arrow_buttons_usize(&mut ctx.vertices, ui, None, None);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Edges");
+                    up_down_arrow_buttons_usize(&mut ctx.edges, ui, None, None);
+                });
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut ctx.connected, "Connected");
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("Apply").clicked() {
+                        ctx.current_selection = Some(format!(
+                            "Selected: Generate Graph(vertices {}, edges {}{})",
+                            ctx.vertices,
+                            ctx.edges,
+                            if ctx.connected { ", connected" } else { "" }
+                        ));
+                        ev_generate_graph.write(GenerateGraph {
+                            vertices: ctx.vertices,
+                            edges: ctx.edges,
+                            connected: ctx.connected,
+                        });
+                    }
+                });
+                ui.heading("Graph from File");
+                for file in ctx.files.clone() {
                     ui.horizontal(|ui| {
-                        let selected = graph_source_context
-                            .selected_file
-                            .as_ref()
-                            .is_some_and(|f| f == &file);
+                        let selected = ctx.selected_file.as_ref().is_some_and(|f| f == &file);
                         if ui.radio(selected, file.clone()).clicked() {
-                            graph_source_context.selected_file = Some(file);
+                            ctx.selected_file = Some(file);
                         }
                     });
                 }
-            })
+                #[allow(clippy::collapsible_if)]
+                if let Some(selected_file) = ctx.selected_file.clone() {
+                    if ui.button("Apply").clicked() {
+                        ctx.current_selection = Some(format!("Selected: File {}", selected_file));
+                        ev_load_graph.write(LoadGraph {
+                            path: format!("{}{}", ctx.path, selected_file),
+                        });
+                    }
+                }
+            });
         });
     }
 }
@@ -293,7 +439,6 @@ fn update_layout_graph(
 }
 
 fn iterate_layout(mut layout: NonSendMut<LayoutResource>) {
-    info!("Iterating");
     layout.iterate()
 }
 

@@ -1,10 +1,10 @@
-use force_smith::prelude::*;
+use force_smith::prelude::Parameterized;
 use force_smith::prelude::{LayoutBuilder, Step, Vec2};
 use force_smith::utils::applicators::{linear_attraction_applicator, linear_repulsion_applicator};
 
 #[derive(Parameterized)]
 pub struct Config {
-    #[parameter]
+    #[parameter(name = "Hello world")]
     temperature: f32,
     #[parameter]
     ideal_edge_len: f32,
@@ -29,7 +29,7 @@ impl Default for Config {
         Self {
             temperature: 100.0,
             ideal_edge_len: 10.0,
-            cooling_fn: |t| t * 0.9,
+            cooling_fn: |t| t * 0.99,
         }
     }
 }
