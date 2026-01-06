@@ -15,7 +15,7 @@ keywords = [
   "algorithm",
   "macros",
 ]
-categories = ["graphics", "visualization", "algorithms"]
+categories = ["graphics", "visualization", "algorithms", "macros", "derive"]
 exclude = ["/target", "/.gitignore", "/.github", "/.idea", "tests/*"]
 
 [lib]
