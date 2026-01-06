@@ -1,5 +1,6 @@
-use force_smith::prelude::Parameterized;
-use force_smith::prelude::{LayoutBuilder, Step, Vec2};
+use force_smith::layout::types::VertexPair;
+use force_smith::prelude::{Force, LayoutBuilder, Vec2};
+use force_smith::prelude::{Parameterized, visualize};
 use force_smith::utils::applicators::{linear_attraction_applicator, linear_repulsion_applicator};
 
 #[derive(Parameterized)]
@@ -38,8 +39,8 @@ fn main() {
     let layout = LayoutBuilder::build()
         .with_context_type::<Config>()
         .with_graph_transformation_fn(|g| g.into())
-        .with_step(Step {
-            force_fn: |pair, ctx| {
+        .with_force(Force {
+            force_fn: |pair: VertexPair<Vec2>, ctx| {
                 let direction = pair.from.direction(pair.to);
                 let force = direction.length().powi(2).max(0.01) / ctx.ideal_edge_len;
                 let norm_dir = direction.normalize().unwrap_or(Vec2::ZERO);
@@ -47,8 +48,8 @@ fn main() {
             },
             applicator_fn: linear_attraction_applicator,
         })
-        .with_step(Step {
-            force_fn: |pair, ctx| {
+        .with_force(Force {
+            force_fn: |pair: VertexPair<Vec2>, ctx| {
                 let direction = pair.from.direction(pair.to);
                 let force = -ctx.ideal_edge_len.powi(2) / direction.length().max(0.01);
                 let norm_direction = direction.normalize().unwrap_or(Vec2::ZERO);

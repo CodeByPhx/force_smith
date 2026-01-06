@@ -18,7 +18,7 @@ pub struct Layout<Vertex, Edge, Context, C> {
     graph: SpecializedGraph<Vertex, Edge>,
     graph_transformation_fn: GraphTransformationFn<Vertex, Edge>,
     context: C,
-    steps: Steps<Vertex, Edge, Context>,
+    forces: Forces<Vertex, Edge, Context>,
     displacements: Displacements,
     position_update_fn: PositionUpdateFn<Vertex, Context>,
 }
@@ -36,14 +36,14 @@ pub struct Layout<Vertex, Edge, Context, C> {
 impl<Vertex, Edge, Context> Layout<Vertex, Edge, Context, NoneContext> {
     pub fn new(
         graph_transformation_fn: GraphTransformationFn<Vertex, Edge>,
-        steps: Steps<Vertex, Edge, Context>,
+        steps: Forces<Vertex, Edge, Context>,
         position_update_fn: PositionUpdateFn<Vertex, Context>,
     ) -> Self {
         Self {
             graph: SpecializedGraph::default(),
             graph_transformation_fn,
             context: NoneContext,
-            steps,
+            forces: steps,
             displacements: Displacements::default(),
             position_update_fn,
         }
@@ -71,7 +71,7 @@ impl<Vertex, Edge, Context, C> Layout<Vertex, Edge, Context, C> {
             graph: self.graph,
             graph_transformation_fn: self.graph_transformation_fn,
             context: context.into(),
-            steps: self.steps,
+            forces: self.forces,
             displacements: self.displacements,
             position_update_fn: self.position_update_fn,
         }
@@ -85,7 +85,7 @@ impl<Vertex, Edge, Context, C> Layout<Vertex, Edge, Context, C> {
             graph: self.graph,
             graph_transformation_fn: self.graph_transformation_fn,
             context: Context::default().into(),
-            steps: self.steps,
+            forces: self.forces,
             displacements: self.displacements,
             position_update_fn: self.position_update_fn,
         }
@@ -111,7 +111,7 @@ where
     }
 
     fn iterate(&mut self) {
-        for step in self.steps.iter() {
+        for step in self.forces.iter() {
             step.apply(
                 &self.graph.vertices,
                 &self.graph.edges,
@@ -160,7 +160,7 @@ mod tests {
             graph: SpecializedGraph::default(),
             graph_transformation_fn: |g| g.into(),
             context: ().into(),
-            steps: vec![Step {
+            forces: vec![Force {
                 force_fn: |pair: VertexPair<'_, Vec2>, _: &()| {
                     pair.from.direction(pair.to) * pair.from.distance(pair.to)
                 },

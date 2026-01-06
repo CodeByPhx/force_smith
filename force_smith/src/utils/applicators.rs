@@ -70,8 +70,11 @@ pub fn linear_position_update<Vertex, Context>(
 mod tests {
     use crate::{
         builder::LayoutBuilder,
-        layout::{LayoutAlgorithm, types::BaseGraph},
-        prelude::{Step, Vec2},
+        layout::{
+            LayoutAlgorithm,
+            types::{BaseGraph, VertexPair},
+        },
+        prelude::{Force, Vec2},
         utils::applicators::{
             linear_attraction_applicator, linear_position_update, linear_repulsion_applicator,
         },
@@ -82,8 +85,10 @@ mod tests {
         let layout = LayoutBuilder::build()
             .with_context_type::<()>()
             .with_graph_transformation_fn(|g| g.into())
-            .with_step(Step {
-                force_fn: |pair, _| pair.from.direction(pair.to) * pair.from.distance(pair.to),
+            .with_force(Force {
+                force_fn: |pair: VertexPair<Vec2>, _| {
+                    pair.from.direction(pair.to) * pair.from.distance(pair.to)
+                },
                 applicator_fn: linear_repulsion_applicator,
             })
             .with_position_update_fn(linear_position_update)
@@ -109,8 +114,10 @@ mod tests {
         let layout = LayoutBuilder::build()
             .with_context_type::<()>()
             .with_graph_transformation_fn(|g| g.into())
-            .with_step(Step {
-                force_fn: |pair, _| pair.from.direction(pair.to) * pair.from.distance(pair.to),
+            .with_force(Force {
+                force_fn: |pair: VertexPair<Vec2>, _| {
+                    pair.from.direction(pair.to) * pair.from.distance(pair.to)
+                },
                 applicator_fn: linear_attraction_applicator,
             })
             .with_position_update_fn(linear_position_update)

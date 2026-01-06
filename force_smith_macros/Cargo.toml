@@ -2,6 +2,21 @@
 name = "force_smith_macros"
 version = "0.1.0"
 edition = "2024"
+authors = ["CodeByPhx CodeByPhx@proton.me"]
+description = "force_smith_macros is the utility crate for force_smith."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/CodeByPhx/force_smith"
+keywords = [
+  "graph",
+  "layout",
+  "visualization",
+  "force-directed",
+  "algorithm",
+  "macros",
+]
+categories = ["graphics", "visualization", "algorithms"]
+exclude = ["/target", "/.gitignore", "/.github", "/.idea", "tests/*"]
 
 [lib]
 proc-macro = true

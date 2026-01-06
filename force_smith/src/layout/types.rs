@@ -1,40 +1,40 @@
 use crate::utils::vec2::Vec2;
 
-/// A collection of layout steps executed in sequence during simulation.
+/// A collection of layout forces executed in sequence during simulation.
 ///
-/// Each [`Step`] defines a single force and its application behavior.
+/// Each [`Force`] defines a single force and its application behavior.
 /// This wrapper provides deref access to the underlying `Vec`.
-pub struct Steps<Vertex, Edge, Context>(pub Vec<Step<Vertex, Edge, Context>>);
-impl<Vertex, Edge, Context> std::ops::Deref for Steps<Vertex, Edge, Context> {
-    type Target = Vec<Step<Vertex, Edge, Context>>;
+pub struct Forces<Vertex, Edge, Context>(pub Vec<Force<Vertex, Edge, Context>>);
+impl<Vertex, Edge, Context> std::ops::Deref for Forces<Vertex, Edge, Context> {
+    type Target = Vec<Force<Vertex, Edge, Context>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<Vertex, Edge, Context> std::ops::DerefMut for Steps<Vertex, Edge, Context> {
+impl<Vertex, Edge, Context> std::ops::DerefMut for Forces<Vertex, Edge, Context> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
-impl<Vertex, Edge, Context> From<Vec<Step<Vertex, Edge, Context>>>
-    for Steps<Vertex, Edge, Context>
+impl<Vertex, Edge, Context> From<Vec<Force<Vertex, Edge, Context>>>
+    for Forces<Vertex, Edge, Context>
 {
-    fn from(value: Vec<Step<Vertex, Edge, Context>>) -> Self {
+    fn from(value: Vec<Force<Vertex, Edge, Context>>) -> Self {
         Self(value)
     }
 }
 
-/// A single step in the layout simulation.
+/// A single force in the layout simulation.
 ///
-/// Each step defines:
+/// Each force defines:
 /// - A **force function** that computes directional displacement between vertices.
 /// - An **applicator function** that applies those displacements.
-pub struct Step<Vertex, Edge, Context> {
+pub struct Force<Vertex, Edge, Context> {
     pub force_fn: ForceFn<Vertex, Context>,
     pub applicator_fn: ApplicatorFn<Vertex, Edge, Context>,
 }
-impl<Vertex, Edge, Context> Step<Vertex, Edge, Context> {
+impl<Vertex, Edge, Context> Force<Vertex, Edge, Context> {
     pub fn apply(
         &self,
         vertices: &[Vertex],
@@ -49,7 +49,7 @@ impl<Vertex, Edge, Context>
     From<(
         ApplicatorFn<Vertex, Edge, Context>,
         ForceFn<Vertex, Context>,
-    )> for Step<Vertex, Edge, Context>
+    )> for Force<Vertex, Edge, Context>
 {
     fn from(
         value: (

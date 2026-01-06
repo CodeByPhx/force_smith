@@ -2,7 +2,7 @@ pub mod types;
 
 use crate::layout::{
     Layout,
-    types::{GraphTransformationFn, NoneContext, PositionUpdateFn, Step, Steps},
+    types::{Force, Forces, GraphTransformationFn, NoneContext, PositionUpdateFn},
 };
 use std::marker::PhantomData;
 use types::*;
@@ -11,7 +11,7 @@ pub struct LayoutBuilder<Vertex, Edge, Context, G, P, CtxType = Context> {
     _ctx_type: PhantomData<CtxType>,
     graph_transformation_fn: G,
     position_update_fn: P,
-    steps: Steps<Vertex, Edge, Context>,
+    forces: Forces<Vertex, Edge, Context>,
 }
 
 /// Type-state: **Initial**
@@ -27,15 +27,6 @@ pub struct LayoutBuilder<Vertex, Edge, Context, G, P, CtxType = Context> {
 /// - [`with_context_type`] to explicitly set the compile-time context type for better LSP support
 /// - [`with_graph_transformation_fn`] to supply a graph transformation function
 /// - [`with_position_update_fn`] to define how vertex positions are updated
-///
-/// # Example
-///
-/// ```rust, ignore
-/// let builder = LayoutBuilder::build()
-///     .with_context_type::<MyContext>()
-///     .with_graph_transformation_fn(|g| g.into())
-///     .with_position_update_fn(|disp, verts, ctx| { /* ... */ });
-/// ```
 impl<Vertex, Edge, Context>
     LayoutBuilder<Vertex, Edge, Context, NoneGraphTransformationFn, NonePositionUpdateFn>
 {
@@ -44,7 +35,7 @@ impl<Vertex, Edge, Context>
         LayoutBuilder {
             graph_transformation_fn: NoneGraphTransformationFn,
             position_update_fn: NonePositionUpdateFn,
-            steps: Vec::new().into(),
+            forces: Vec::new().into(),
             _ctx_type: PhantomData,
         }
     }
@@ -71,7 +62,7 @@ impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
         LayoutBuilder {
             graph_transformation_fn: self.graph_transformation_fn,
             position_update_fn: self.position_update_fn,
-            steps: self.steps,
+            forces: self.forces,
             _ctx_type: PhantomData,
         }
     }
@@ -83,7 +74,7 @@ impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
         LayoutBuilder {
             graph_transformation_fn: graph_transformation_fn.into(),
             position_update_fn: self.position_update_fn,
-            steps: self.steps,
+            forces: self.forces,
             _ctx_type: self._ctx_type,
         }
     }
@@ -95,13 +86,13 @@ impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
         LayoutBuilder {
             graph_transformation_fn: self.graph_transformation_fn,
             position_update_fn: position_update_fn.into(),
-            steps: self.steps,
+            forces: self.forces,
             _ctx_type: self._ctx_type,
         }
     }
 
-    pub fn with_step(mut self, step: Step<Vertex, Edge, Context>) -> Self {
-        self.steps.push(step);
+    pub fn with_force(mut self, force: Force<Vertex, Edge, Context>) -> Self {
+        self.forces.push(force);
         self
     }
 }
@@ -118,17 +109,6 @@ impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
 /// From this state, the builder can produce a finalized [`Layout`] instance by
 /// calling [`to_layout`]. After this point, the builder is consumed and no further
 /// configuration can be performed.
-///
-/// # Example
-///
-/// ```rust, ignore
-/// let layout = LayoutBuilder::build()
-///     .with_context_type::<MyContext>()
-///     .with_graph_transformation_fn(|g| g.into())
-///     .with_position_update_fn(|disp, verts, ctx| { /* ... */ })
-///     .with_step(my_step)
-///     .to_layout();
-/// ```
 impl<Vertex, Edge, Context>
     LayoutBuilder<
         Vertex,
@@ -141,7 +121,7 @@ impl<Vertex, Edge, Context>
     pub fn to_layout(self) -> Layout<Vertex, Edge, Context, NoneContext> {
         Layout::new(
             self.graph_transformation_fn.0,
-            self.steps,
+            self.forces,
             self.position_update_fn.0,
         )
     }
@@ -167,7 +147,7 @@ mod tests {
                     vertices[idx] += displacements[idx];
                 }
             })
-            .with_step(Step {
+            .with_force(Force {
                 force_fn: |pair, _| pair.from.direction(pair.to) * pair.from.distance(pair.to),
                 applicator_fn: |vertices, edges, ctx, displacements, force_fn| {
                     for (from, to) in edges {

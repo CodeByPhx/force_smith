@@ -1,5 +1,5 @@
 pub use crate::builder::LayoutBuilder;
-pub use crate::layout::{Layout, types::Step};
+pub use crate::layout::{Layout, types::Force};
 pub use crate::utils::vec2::Vec2;
 
 pub use crate::visualizer::visualize;
