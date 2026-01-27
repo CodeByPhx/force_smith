@@ -2,7 +2,7 @@ use std::ops::AddAssign;
 
 use crate::{
     layout::types::{Displacements, ForceFn, ToVertexPair},
-    prelude::Vec2,
+    utils::vec2::Vec2,
 };
 
 pub fn linear_repulsion_applicator<Vertex, Edge, Context>(
@@ -72,11 +72,13 @@ mod tests {
         builder::LayoutBuilder,
         layout::{
             LayoutAlgorithm,
-            types::{BaseGraph, VertexPair},
+            types::{BaseGraph, Force, VertexPair},
         },
-        prelude::{Force, Vec2},
-        utils::applicators::{
-            linear_attraction_applicator, linear_position_update, linear_repulsion_applicator,
+        utils::{
+            applicators::{
+                linear_attraction_applicator, linear_position_update, linear_repulsion_applicator,
+            },
+            vec2::Vec2,
         },
     };
 

@@ -1,7 +1,9 @@
-use force_smith::layout::types::VertexPair;
-use force_smith::prelude::{Force, LayoutBuilder, Vec2};
-use force_smith::prelude::{Parameterized, visualize};
+use force_smith::builder::LayoutBuilder;
+use force_smith::layout::types::{Force, VertexPair};
 use force_smith::utils::applicators::{linear_attraction_applicator, linear_repulsion_applicator};
+use force_smith::utils::vec2::Vec2;
+use force_smith::visualizer::visualize_debug;
+use force_smith_macros::Parameterized;
 
 #[derive(Parameterized)]
 pub struct Config {
@@ -69,5 +71,5 @@ fn main() {
         })
         .to_layout()
         .set_default_context();
-    visualize(Box::new(layout));
+    visualize_debug(Box::new(layout));
 }

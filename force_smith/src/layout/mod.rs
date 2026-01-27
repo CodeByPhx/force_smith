@@ -1,11 +1,7 @@
 pub mod types;
+pub mod visualizer_integration;
 
-use std::collections::HashMap;
-
-use crate::{
-    utils::vec2::Vec2,
-    visualizer::{Parameter, Parameterized, VisualLayoutAlgorithm},
-};
+use crate::utils::vec2::Vec2;
 use types::*;
 
 pub trait LayoutAlgorithm {
@@ -129,26 +125,6 @@ where
     fn get_positions(&self) -> Vec<Vec2> {
         self.graph.vertices.iter().map(|v| v.position()).collect()
     }
-}
-
-impl<Vertex, Edge, Context> Parameterized for Layout<Vertex, Edge, Context, SomeContext<Context>>
-where
-    Context: Parameterized,
-{
-    fn get_parameters(&self) -> HashMap<String, Parameter> {
-        self.context.get_parameters()
-    }
-
-    fn update_parameters(&mut self, parameters: &HashMap<String, Parameter>) {
-        self.context.update_parameters(parameters);
-    }
-}
-impl<Vertex, Edge, Context> VisualLayoutAlgorithm
-    for Layout<Vertex, Edge, Context, SomeContext<Context>>
-where
-    Context: Parameterized,
-    Vertex: Position,
-{
 }
 
 #[cfg(test)]
