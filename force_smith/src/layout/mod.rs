@@ -16,7 +16,6 @@ pub struct Layout<Vertex: Position, Edge, Context, C> {
     context: C,
     forces: Forces<Vertex, Edge, Context>,
     displacements: Displacements,
-    positions: Vec<Vec2>,
     position_update_fn: PositionUpdateFn<Vertex, Context>,
 }
 
@@ -123,6 +122,8 @@ impl<Vertex: Position, Edge, Context> LayoutAlgorithm
     }
 
     fn write_positions(&self, positions: &mut Vec<Vec2>) {
-        positions.copy_from_slice(self.graph.vertices.iter());
+        for (idx, position) in self.graph.vertices.iter().enumerate() {
+            positions[idx] = *position.vec2_as_ref();
+        }
     }
 }
