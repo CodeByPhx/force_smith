@@ -14,7 +14,7 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
             .add_plugins(ConfigUI)
-            .add_plugins(GraphSourceUI)
-            .add_plugins(VisualizerControlUI);
+            .add_plugins(GraphSourceUI);
+        // .add_plugins(VisualizerControlUI);
     }
 }

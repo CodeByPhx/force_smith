@@ -19,7 +19,7 @@ impl Plugin for LayoutPlugin {
                     .before(CoreIteration),
                 (
                     iterate_layout.run_if(LayoutMode::is_run),
-                    iterate_layout_debug.run_if(LayoutMode::is_debug),
+                    iterate_layout_debug.run_if(LayoutMode::is_debug_compute_forces),
                 )
                     .in_set(CoreIteration),
             )
@@ -36,7 +36,9 @@ pub enum LayoutMode {
     Run,
     #[default]
     Stop,
-    Debug,
+    DebugComputeForces,
+    DebugStop,
+    DebugUpdateGraph,
 }
 impl LayoutMode {
     fn is_run(mode: Res<LayoutMode>) -> bool {
@@ -45,8 +47,14 @@ impl LayoutMode {
     fn is_stop(mode: Res<LayoutMode>) -> bool {
         matches!(*mode, LayoutMode::Stop)
     }
-    fn is_debug(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::Debug)
+    fn is_debug_compute_forces(mode: Res<LayoutMode>) -> bool {
+        matches!(*mode, LayoutMode::DebugComputeForces)
+    }
+    fn is_debug_stop(mode: Res<LayoutMode>) -> bool {
+        matches!(*mode, LayoutMode::DebugStop)
+    }
+    fn is_debug_update_graph(mode: Res<LayoutMode>) -> bool {
+        matches!(*mode, LayoutMode::DebugUpdateGraph)
     }
 }
 
@@ -70,8 +78,8 @@ fn update_layout_config(config: Res<LayoutConfigResource>, mut layout: NonSendMu
     layout.update_parameters(&config);
 }
 
-fn update_layout_graph() {
-    todo!()
+fn update_layout_graph(graph: Res<GraphResource>, mut layout: NonSendMut<LayoutResource>) {
+    layout.set_graph(&graph);
 }
 
 fn iterate_layout(mut layout: NonSendMut<LayoutResource>) {

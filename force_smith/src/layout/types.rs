@@ -1,4 +1,4 @@
-use crate::utils::vec2::Vec2;
+use bevy_math::Vec2;
 
 /// A collection of layout forces executed in sequence during simulation.
 ///
@@ -115,9 +115,18 @@ impl From<&BaseGraph> for SpecializedGraph<Vec2, (usize, usize)> {
     }
 }
 
-/// Trait implemented by vertex types that can return a position vector.
 pub trait Position {
-    fn position(&self) -> Vec2;
+    fn vec2_as_ref(&self) -> &Vec2;
+    fn vec2_as_ref_mut(&mut self) -> &mut Vec2;
+}
+impl Position for Vec2 {
+    fn vec2_as_ref(&self) -> &Vec2 {
+        self
+    }
+
+    fn vec2_as_ref_mut(&mut self) -> &mut Vec2 {
+        self
+    }
 }
 
 /// The raw graph input used before transformation.

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
-use crate::visualizer::{VisualizerStates, layout::LayoutConfigResource};
+use crate::visualizer::layout::LayoutConfigResource;
 
 pub struct ConfigUI;
 impl Plugin for ConfigUI {

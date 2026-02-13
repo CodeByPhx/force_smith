@@ -1,2 +1,2 @@
 pub mod applicators;
-pub mod vec2;
+pub mod safe_vec2;

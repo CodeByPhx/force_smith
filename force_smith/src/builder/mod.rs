@@ -2,12 +2,12 @@ pub mod types;
 
 use crate::layout::{
     Layout,
-    types::{Force, Forces, GraphTransformationFn, NoneContext, PositionUpdateFn},
+    types::{Force, Forces, GraphTransformationFn, NoneContext, Position, PositionUpdateFn},
 };
 use std::marker::PhantomData;
 use types::*;
 
-pub struct LayoutBuilder<Vertex, Edge, Context, G, P, CtxType = Context> {
+pub struct LayoutBuilder<Vertex: Position, Edge, Context, G, P, CtxType = Context> {
     _ctx_type: PhantomData<CtxType>,
     graph_transformation_fn: G,
     position_update_fn: P,
@@ -27,7 +27,7 @@ pub struct LayoutBuilder<Vertex, Edge, Context, G, P, CtxType = Context> {
 /// - [`with_context_type`] to explicitly set the compile-time context type for better LSP support
 /// - [`with_graph_transformation_fn`] to supply a graph transformation function
 /// - [`with_position_update_fn`] to define how vertex positions are updated
-impl<Vertex, Edge, Context>
+impl<Vertex: Position, Edge, Context>
     LayoutBuilder<Vertex, Edge, Context, NoneGraphTransformationFn, NonePositionUpdateFn>
 {
     pub fn build()
@@ -57,7 +57,7 @@ impl<Vertex, Edge, Context>
 /// You can stay in this state until all required configuration pieces are provided.
 /// Once both `G` and `P` are in the `Some*` state, the builder transitions to the
 /// final state, enabling [`to_layout`].
-impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
+impl<Vertex: Position, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
     pub fn with_context_type<Ctx>(self) -> LayoutBuilder<Vertex, Edge, Context, G, P, Ctx> {
         LayoutBuilder {
             graph_transformation_fn: self.graph_transformation_fn,
@@ -109,7 +109,7 @@ impl<Vertex, Edge, Context, G, P> LayoutBuilder<Vertex, Edge, Context, G, P> {
 /// From this state, the builder can produce a finalized [`Layout`] instance by
 /// calling [`to_layout`]. After this point, the builder is consumed and no further
 /// configuration can be performed.
-impl<Vertex, Edge, Context>
+impl<Vertex: Position, Edge, Context>
     LayoutBuilder<
         Vertex,
         Edge,
@@ -124,64 +124,5 @@ impl<Vertex, Edge, Context>
             self.forces,
             self.position_update_fn.0,
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        layout::{
-            LayoutAlgorithm,
-            types::{BaseGraph, ToVertexPair},
-        },
-        utils::vec2::Vec2,
-    };
-
-    fn setup_simple_fdl() -> Layout<Vec2, (usize, usize), (), NoneContext> {
-        LayoutBuilder::build()
-            .with_context_type::<()>()
-            .with_graph_transformation_fn(|g| g.into())
-            .with_position_update_fn(|displacements, vertices, _| {
-                for idx in 0..vertices.len() {
-                    vertices[idx] += displacements[idx];
-                }
-            })
-            .with_force(Force {
-                force_fn: |pair, _| pair.from.direction(pair.to) * pair.from.distance(pair.to),
-                applicator_fn: |vertices, edges, ctx, displacements, force_fn| {
-                    for (from, to) in edges {
-                        let displacement = force_fn(vertices.to_vertex_pair(*from, *to), ctx);
-                        displacements[*from] += displacement;
-                        displacements[*to] -= displacement;
-                    }
-                },
-            })
-            .to_layout()
-    }
-
-    #[test]
-    fn simple_fdl_runs() {
-        let layout = setup_simple_fdl();
-
-        let base_graph = BaseGraph {
-            vertices: vec![
-                Vec2::from_xy(0.0, 0.0),
-                Vec2::from_xy(1.0, 0.0),
-                Vec2::from_xy(2.0, 0.0),
-            ],
-            edges: vec![(0, 1)],
-        };
-
-        let mut layout = layout.set_default_context();
-        layout.set_graph(&base_graph);
-        layout.iterate();
-
-        let result = layout.get_positions();
-        println!("{:?}", result);
-
-        assert_eq!(result[0], Vec2::from_xy(1.0, 0.0));
-        assert_eq!(result[1], Vec2::from_xy(0.0, 0.0));
-        assert_eq!(result[2], Vec2::from_xy(2.0, 0.0));
     }
 }

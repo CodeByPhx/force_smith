@@ -3,11 +3,12 @@ use crate::{
         Layout,
         types::{Displacements, Position, SomeContext},
     },
-    utils::vec2::Vec2,
     visualizer::layout_trait::{DebugLayoutAlgorithm, Parameterized},
 };
+use bevy_math::Vec2;
 
-impl<Vertex, Edge, Context> Parameterized for Layout<Vertex, Edge, Context, SomeContext<Context>>
+impl<Vertex: Position, Edge, Context> Parameterized
+    for Layout<Vertex, Edge, Context, SomeContext<Context>>
 where
     Context: Parameterized,
 {
@@ -25,10 +26,8 @@ where
     }
 }
 
-impl<Vertex, Edge, Context> DebugLayoutAlgorithm
+impl<Vertex: Position, Edge, Context> DebugLayoutAlgorithm
     for Layout<Vertex, Edge, Context, SomeContext<Context>>
-where
-    Vertex: Position,
 {
     fn iterate_debug(&mut self) -> Vec<Vec<Vec2>> {
         let mut forces: Vec<Vec<Vec2>> = Vec::with_capacity(self.forces.len());
@@ -49,4 +48,3 @@ where
         forces
     }
 }
-

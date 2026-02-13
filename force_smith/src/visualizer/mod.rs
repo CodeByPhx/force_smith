@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::visualizer::layout_trait::{Parameterized, VisualizableDebugLayout};
+use crate::visualizer::{
+    layout_trait::{Parameterized, VisualizableDebugLayout},
+    world::WorldPlugin,
+};
 use global_resources::GraphResource;
 use graph_visualizer::GraphVisualizerPlugin;
 use layout::{LayoutConfigResource, LayoutPlugin, LayoutResource};
@@ -11,10 +14,12 @@ mod graph_visualizer;
 mod layout;
 pub mod layout_trait;
 mod ui;
+mod world;
 
 pub fn visualize_debug(layout: Box<dyn VisualizableDebugLayout>) {
     let configuration_ressource: LayoutConfigResource =
         LayoutConfigResource::from(layout.get_parameters());
+    println!("{:?}", *configuration_ressource);
     let layout_ressource: LayoutResource = LayoutResource::from(layout);
     let graph_ressource: GraphResource = GraphResource::default();
 
@@ -22,10 +27,11 @@ pub fn visualize_debug(layout: Box<dyn VisualizableDebugLayout>) {
         .insert_non_send_resource(layout_ressource)
         .insert_resource(configuration_ressource)
         .insert_resource(graph_ressource)
+        .add_plugins(WorldPlugin)
         .add_plugins(DefaultPlugins)
         .add_plugins(UIPlugin)
         .add_plugins(LayoutPlugin)
-        .add_plugins(GraphVisualizerPlugin)
+        // .add_plugins(GraphVisualizerPlugin)
         .configure_sets(
             Update,
             (
@@ -33,7 +39,8 @@ pub fn visualize_debug(layout: Box<dyn VisualizableDebugLayout>) {
                 VisualizerStates::Iteration,
                 VisualizerStates::AfterIteration,
             ),
-        );
+        )
+        .run();
 }
 
 #[derive(SystemSet, Hash, Clone, Copy, PartialEq, Eq, Debug)]

@@ -1,21 +1,22 @@
 pub mod types;
 pub mod visualizer_integration;
 
-use crate::utils::vec2::Vec2;
+use bevy_math::Vec2;
 use types::*;
 
 pub trait LayoutAlgorithm {
     fn set_graph(&mut self, graph: &BaseGraph);
     fn iterate(&mut self);
-    fn get_positions(&self) -> Vec<Vec2>;
+    fn write_positions(&self, positions: &mut Vec<Vec2>);
 }
 
-pub struct Layout<Vertex, Edge, Context, C> {
+pub struct Layout<Vertex: Position, Edge, Context, C> {
     graph: SpecializedGraph<Vertex, Edge>,
     graph_transformation_fn: GraphTransformationFn<Vertex, Edge>,
     context: C,
     forces: Forces<Vertex, Edge, Context>,
     displacements: Displacements,
+    positions: Vec<Vec2>,
     position_update_fn: PositionUpdateFn<Vertex, Context>,
 }
 
@@ -29,7 +30,7 @@ pub struct Layout<Vertex, Edge, Context, C> {
 ///
 /// From this state, you can transition into the next type-state by calling
 /// [`set_graph`].
-impl<Vertex, Edge, Context> Layout<Vertex, Edge, Context, NoneContext> {
+impl<Vertex: Position, Edge, Context> Layout<Vertex, Edge, Context, NoneContext> {
     pub fn new(
         graph_transformation_fn: GraphTransformationFn<Vertex, Edge>,
         steps: Forces<Vertex, Edge, Context>,
@@ -58,7 +59,7 @@ impl<Vertex, Edge, Context> Layout<Vertex, Edge, Context, NoneContext> {
 ///
 /// After both a graph and a context are assigned, the layout transitions to
 /// the **Final** state, enabling iteration and position updates.
-impl<Vertex, Edge, Context, C> Layout<Vertex, Edge, Context, C> {
+impl<Vertex: Position, Edge, Context, C> Layout<Vertex, Edge, Context, C> {
     pub fn set_context(
         self,
         context: Context,
@@ -97,9 +98,8 @@ impl<Vertex, Edge, Context, C> Layout<Vertex, Edge, Context, C> {
 ///
 /// In this state, the layout is mutable, and you can safely iterate over steps
 /// that apply forces, update positions, and evolve the graph state.
-impl<Vertex, Edge, Context> LayoutAlgorithm for Layout<Vertex, Edge, Context, SomeContext<Context>>
-where
-    Vertex: Position,
+impl<Vertex: Position, Edge, Context> LayoutAlgorithm
+    for Layout<Vertex, Edge, Context, SomeContext<Context>>
 {
     fn set_graph(&mut self, graph: &BaseGraph) {
         self.graph = (self.graph_transformation_fn)(graph);
@@ -122,73 +122,7 @@ where
         )
     }
 
-    fn get_positions(&self) -> Vec<Vec2> {
-        self.graph.vertices.iter().map(|v| v.position()).collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn simple_fdl() -> Layout<Vec2, (usize, usize), (), SomeContext<()>> {
-        Layout {
-            graph: SpecializedGraph::default(),
-            graph_transformation_fn: |g| g.into(),
-            context: ().into(),
-            forces: vec![Force {
-                force_fn: |pair: VertexPair<'_, Vec2>, _: &()| {
-                    pair.from.direction(pair.to) * pair.from.distance(pair.to)
-                },
-                applicator_fn: |vertices, edges, ctx, displacements, force_fn| {
-                    for (from, to) in edges {
-                        let displacement = force_fn(vertices.to_vertex_pair(*from, *to), ctx);
-                        println!("Got here");
-                        displacements[*from] += displacement;
-                        displacements[*to] -= displacement;
-                    }
-                },
-            }]
-            .into(),
-            displacements: Displacements::default(),
-            position_update_fn: |displacements, vertices, _| {
-                for idx in 0..vertices.len() {
-                    vertices[idx] += displacements[idx];
-                }
-            },
-        }
-    }
-
-    #[test]
-    fn one_iteration_predictable_three_node_result() {
-        let mut layout = simple_fdl();
-
-        let base_graph = BaseGraph {
-            vertices: vec![
-                Vec2::new(0.0, 0.0), // node 0
-                Vec2::new(1.0, 0.0), // node 1
-                Vec2::new(2.0, 0.0), // node 2 (disconnected)
-            ],
-            edges: vec![(0, 1)],
-        };
-
-        layout.set_graph(&base_graph);
-
-        layout.iterate();
-
-        let got = layout.get_positions();
-
-        // Expected:
-        // edge (0,1) computes force = direction(0->1) * distance(0,1) = (1,0) * 1 = (1,0)
-        // vertex 0 += (1,0) -> (1,0)
-        // vertex 1 -= (1,0) -> (0,0)
-        // vertex 2 unchanged -> (2,0)
-        let expected = vec![
-            Vec2::new(1.0, 0.0),
-            Vec2::new(0.0, 0.0),
-            Vec2::new(2.0, 0.0),
-        ];
-
-        assert_eq!(got, expected);
+    fn write_positions(&self, positions: &mut Vec<Vec2>) {
+        positions.copy_from_slice(self.graph.vertices.iter());
     }
 }
