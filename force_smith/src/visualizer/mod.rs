@@ -31,7 +31,7 @@ pub fn visualize_debug(layout: Box<dyn VisualizableDebugLayout>) {
         .add_plugins(DefaultPlugins)
         .add_plugins(UIPlugin)
         .add_plugins(LayoutPlugin)
-        // .add_plugins(GraphVisualizerPlugin)
+        .add_plugins(GraphVisualizerPlugin)
         .configure_sets(
             Update,
             (

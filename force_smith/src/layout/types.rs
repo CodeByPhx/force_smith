@@ -118,6 +118,7 @@ impl From<&BaseGraph> for SpecializedGraph<Vec2, (usize, usize)> {
 pub trait Position {
     fn vec2_as_ref(&self) -> &Vec2;
     fn vec2_as_ref_mut(&mut self) -> &mut Vec2;
+    fn vec2_copy(&self) -> Vec2;
 }
 impl Position for Vec2 {
     fn vec2_as_ref(&self) -> &Vec2 {
@@ -126,6 +127,10 @@ impl Position for Vec2 {
 
     fn vec2_as_ref_mut(&mut self) -> &mut Vec2 {
         self
+    }
+
+    fn vec2_copy(&self) -> Vec2 {
+        *self
     }
 }
 

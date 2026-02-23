@@ -7,7 +7,7 @@ use types::*;
 pub trait LayoutAlgorithm {
     fn set_graph(&mut self, graph: &BaseGraph);
     fn iterate(&mut self);
-    fn write_positions(&self, positions: &mut Vec<Vec2>);
+    fn get_positions(&self) -> Vec<Vec2>;
 }
 
 pub struct Layout<Vertex: Position, Edge, Context, C> {
@@ -121,9 +121,11 @@ impl<Vertex: Position, Edge, Context> LayoutAlgorithm
         )
     }
 
-    fn write_positions(&self, positions: &mut Vec<Vec2>) {
-        for (idx, position) in self.graph.vertices.iter().enumerate() {
-            positions[idx] = *position.vec2_as_ref();
-        }
+    fn get_positions(&self) -> Vec<Vec2> {
+        self.graph
+            .vertices
+            .iter()
+            .map(Position::vec2_copy)
+            .collect()
     }
 }

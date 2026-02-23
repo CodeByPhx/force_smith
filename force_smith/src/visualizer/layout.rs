@@ -1,6 +1,7 @@
 use crate::visualizer::{
     VisualizerStates,
     global_resources::GraphResource,
+    graph_visualizer::{Destination, Index, NodeMarker},
     layout_trait::{Parameter, VisualizableDebugLayout},
 };
 use bevy::prelude::*;
@@ -18,8 +19,14 @@ impl Plugin for LayoutPlugin {
                 )
                     .before(CoreIteration),
                 (
-                    iterate_layout.run_if(LayoutMode::is_run),
-                    iterate_layout_debug.run_if(LayoutMode::is_debug_compute_forces),
+                    iterate_layout.run_if(deref_res(LayoutMode::is_run)),
+                    iterate_layout_debug.run_if(deref_res(LayoutMode::is_debug_compute_forces)),
+                    attach_destinations
+                        .run_if(
+                            deref_res(LayoutMode::is_run)
+                                .or(deref_res(LayoutMode::is_debug_update_graph)),
+                        )
+                        .after(iterate_layout),
                 )
                     .in_set(CoreIteration),
             )
@@ -31,30 +38,61 @@ impl Plugin for LayoutPlugin {
 #[derive(SystemSet, Eq, PartialEq, Hash, Debug, Clone, Copy)]
 struct CoreIteration;
 
+pub fn deref_res<T, F>(fun: F) -> impl Fn(Res<T>) -> bool
+where
+    T: Resource,
+    F: Fn(&T) -> bool + Copy,
+{
+    move |res: Res<T>| fun(&*res)
+}
+
 #[derive(Resource, Default)]
 pub enum LayoutMode {
     Run,
     #[default]
     Stop,
-    DebugComputeForces,
     DebugStop,
+    DebugComputeForces,
+    DebugShowForces {
+        forces: Vec<Vec<Vec2>>,
+    },
+    DebugStopBeforeUpdate,
     DebugUpdateGraph,
 }
 impl LayoutMode {
-    fn is_run(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::Run)
+    pub fn is_normal_mode(&self) -> bool {
+        matches!(self, LayoutMode::Run | LayoutMode::Stop)
     }
-    fn is_stop(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::Stop)
+    pub fn is_debug_mode(&self) -> bool {
+        match self {
+            LayoutMode::DebugStop => true,
+            LayoutMode::DebugComputeForces => true,
+            LayoutMode::DebugShowForces { forces: _ } => true,
+            LayoutMode::DebugStopBeforeUpdate => true,
+            LayoutMode::DebugUpdateGraph => todo!(),
+            _ => false,
+        }
     }
-    fn is_debug_compute_forces(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::DebugComputeForces)
+    pub fn is_run(&self) -> bool {
+        matches!(self, LayoutMode::Run)
     }
-    fn is_debug_stop(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::DebugStop)
+    pub fn is_stop(&self) -> bool {
+        matches!(self, LayoutMode::Stop)
     }
-    fn is_debug_update_graph(mode: Res<LayoutMode>) -> bool {
-        matches!(*mode, LayoutMode::DebugUpdateGraph)
+    pub fn is_debug_stop(&self) -> bool {
+        matches!(self, LayoutMode::DebugStop)
+    }
+    pub fn is_debug_compute_forces(&self) -> bool {
+        matches!(self, LayoutMode::DebugComputeForces)
+    }
+    pub fn is_debug_show_forces(&self) -> bool {
+        matches!(self, LayoutMode::DebugShowForces { forces: _ })
+    }
+    pub fn is_debug_stop_before_update(&self) -> bool {
+        matches!(self, LayoutMode::DebugStopBeforeUpdate)
+    }
+    pub fn is_debug_update_graph(&self) -> bool {
+        matches!(self, LayoutMode::DebugUpdateGraph)
     }
 }
 
@@ -84,13 +122,23 @@ fn update_layout_graph(graph: Res<GraphResource>, mut layout: NonSendMut<LayoutR
 
 fn iterate_layout(mut layout: NonSendMut<LayoutResource>) {
     layout.iterate();
-    todo!("Send messages");
+}
+
+fn attach_destinations(
+    layout: NonSend<LayoutResource>,
+    nodes: Query<(&Index, Entity), With<NodeMarker>>,
+    mut commands: Commands,
+) {
+    let positions = layout.get_positions();
+    for (&Index(idx), entity) in nodes {
+        commands.entity(entity).insert(Destination(positions[idx]));
+    }
 }
 
 fn iterate_layout_debug(
     mut layout: NonSendMut<LayoutResource>,
     mut layout_mode: ResMut<LayoutMode>,
 ) {
-    *layout_mode = LayoutMode::Stop;
-    todo!("Iterate debug and send messages");
+    let forces = layout.iterate_debug();
+    *layout_mode = LayoutMode::DebugShowForces { forces };
 }

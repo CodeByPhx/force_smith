@@ -10,28 +10,67 @@ impl Plugin for VisualizerControlUI {
     }
 }
 
+pub struct VisualizerControlUiContext {
+    mode: ControlMode,
+}
+
+pub enum ControlMode {
+    Normal,
+    Debug,
+}
+
 fn visualizer_control_ui(mut contexts: EguiContexts, mut layout_mode: ResMut<LayoutMode>) {
     let Ok(context) = contexts.ctx_mut() else {
         return;
     };
     egui::Window::new("Layout Controls").show(context, |ui| {
-        if ui
-            .radio(matches!(*layout_mode, LayoutMode::Stop), "Stop")
-            .clicked()
-        {
-            *layout_mode = LayoutMode::Stop;
-        }
-        if ui
-            .radio(matches!(*layout_mode, LayoutMode::Run), "Run")
-            .clicked()
-        {
-            *layout_mode = LayoutMode::Run;
-        }
-        if ui
-            .radio(matches!(*layout_mode, LayoutMode::Debug), "Debug")
-            .clicked()
-        {
-            *layout_mode = LayoutMode::Debug;
-        }
+        // Selection Bar
+        ui.vertical(|ui| {
+            ui.heading("Mode Selection");
+            ui.horizontal(|ui| {
+                if ui
+                    .radio(layout_mode.is_normal_mode(), "Normal Mode")
+                    .clicked()
+                {
+                    info!("Normal Mode pressed");
+                    // send cleanup debug mode message
+                    *layout_mode = LayoutMode::Stop;
+                };
+                if ui
+                    .radio(layout_mode.is_debug_mode(), "Debug Mode")
+                    .clicked()
+                {
+                    // send cleanup normal mode message
+                    *layout_mode = LayoutMode::DebugStop;
+                }
+            });
+            if layout_mode.is_normal_mode() {
+                ui.heading("Normal Mode");
+                if ui.radio(layout_mode.is_run(), "▶").clicked() {
+                    *layout_mode = LayoutMode::Run;
+                }
+                if ui.radio(layout_mode.is_stop(), "⏸").clicked() {
+                    *layout_mode = LayoutMode::Stop;
+                }
+            } else if layout_mode.is_debug_mode() {
+                ui.heading("Debug Mode");
+                if layout_mode.is_debug_stop() {
+                    ui.horizontal(|ui| {
+                        ui.label("Compute Forces");
+                        if ui.button("⏭").clicked() {
+                            *layout_mode = LayoutMode::DebugComputeForces;
+                        }
+                    });
+                }
+                if layout_mode.is_debug_stop_before_update() {
+                    ui.horizontal(|ui| {
+                        ui.label("Update Graph");
+                        if ui.button("⏭").clicked() {
+                            *layout_mode = LayoutMode::DebugUpdateGraph;
+                        }
+                    });
+                }
+            }
+        });
     });
 }

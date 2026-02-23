@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::visualizer::{VisualizerStates, global_resources::GraphResource, layout::LayoutMode};
+use crate::visualizer::{
+    VisualizerStates,
+    global_resources::GraphResource,
+    layout::{LayoutMode, deref_res},
+};
 
 pub struct GraphVisualizerPlugin;
 impl Plugin for GraphVisualizerPlugin {
@@ -9,11 +13,15 @@ impl Plugin for GraphVisualizerPlugin {
         app.add_message::<NodeDestinations>();
         app.add_systems(
             Update,
-            spawn_graph
-                .run_if(resource_changed::<GraphResource>)
-                .in_set(VisualizerStates::BeforeIteration),
+            (
+                (spawn_graph.run_if(resource_changed::<GraphResource>),)
+                    .in_set(VisualizerStates::BeforeIteration),
+                (move_nodes)
+                    .run_if(deref_res(LayoutMode::is_run))
+                    .in_set(VisualizerStates::AfterIteration),
+            ),
         );
-        todo!("Add Layout Visualizer Logic");
+        // todo!("Add Layout Visualizer Logic");
     }
 }
 
@@ -28,7 +36,7 @@ impl Default for GraphVisualizerPluginConfig {
         Self {
             node_radius: 10.0,
             node_color: Color::srgb(1.0, 0.0, 0.0),
-            node_movement_speed: 10.0,
+            node_movement_speed: 100.0,
         }
     }
 }
@@ -51,7 +59,7 @@ pub struct NodeBundle {
     pub transform: Transform,
 }
 #[derive(Component, Deref, DerefMut)]
-pub struct Destination(Vec2);
+pub struct Destination(pub Vec2);
 impl From<Vec2> for Destination {
     fn from(value: Vec2) -> Self {
         Self(value)
@@ -104,7 +112,7 @@ fn attach_destinations(
     }
 }
 
-fn debug_place_nodes(
+fn place_nodes(
     nodes: Query<(&mut Transform, &Destination, Entity), With<NodeMarker>>,
     mut commands: Commands,
     mut layout_mode: ResMut<LayoutMode>,
@@ -121,7 +129,13 @@ fn debug_show_forces(
     mut commands: Commands,
     mut layout_mode: ResMut<LayoutMode>,
 ) {
-    *layout_mode = LayoutMode::Stop;
+    let LayoutMode::DebugShowForces { forces } = &*layout_mode else {
+        return;
+    };
+    *layout_mode = LayoutMode::DebugStopBeforeUpdate;
+    for (&Index(idx), transform) in nodes {
+        let origin = transform.translation;
+    }
 }
 
 fn move_nodes(
@@ -131,6 +145,7 @@ fn move_nodes(
     mut commands: Commands,
 ) {
     for (mut transform, destination, entity) in nodes {
+        info!("Inside move nodes");
         let origin_pos = transform.translation;
         let target_pos = destination.extend(0.0);
 
@@ -140,9 +155,11 @@ fn move_nodes(
         let movement = norm_dir * config.node_movement_speed * time.delta_secs();
 
         if movement.length() > distance || norm_dir.is_nan() {
+            info!("Inside here");
             transform.translation = target_pos;
             commands.entity(entity).remove::<Destination>();
         } else {
+            info!("Inside else, with len {}", movement.length());
             transform.translation += movement;
         }
     }
