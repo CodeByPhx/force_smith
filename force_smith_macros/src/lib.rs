@@ -36,7 +36,7 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
 
                 if include {
                     param_entries.push(quote! {
-                        parameters.push(#param_name.to_string(), ::force_smith::prelude::ToParameter::to_parameter(&self.#field_name));
+                        parameters.push((#param_name.to_string(), ::force_smith::prelude::ToParameter::to_parameter(&self.#field_name)));
                     });
                     param_updates.push(quote! {
                         if let Some(val) = parameters.iter().find(|(k, _)| k == #param_name).and_then(|(_, param)| <_ as ::force_smith::prelude::FromParameter>::from_parameter(param)) {
