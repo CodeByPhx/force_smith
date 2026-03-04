@@ -3,25 +3,39 @@ use bevy::prelude::*;
 use crate::visualizer::{
     VisualizerStates,
     global_resources::GraphResource,
-    layout::{LayoutMode, deref_res},
+    layout::{DebugState, LayoutMode, LayoutState, NormalState, in_layout_state},
 };
 
 pub struct GraphVisualizerPlugin;
 impl Plugin for GraphVisualizerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GraphVisualizerPluginConfig::default());
-        app.add_message::<NodeDestinations>();
         app.add_systems(
             Update,
             (
                 (spawn_graph.run_if(resource_changed::<GraphResource>),)
                     .in_set(VisualizerStates::BeforeIteration),
                 (move_nodes)
-                    .run_if(deref_res(LayoutMode::is_run))
+                    .run_if(in_layout_state(LayoutState::Normal(NormalState::Run)))
+                    .in_set(VisualizerStates::AfterIteration),
+                (debug_place_nodes)
+                    .run_if(in_layout_state(LayoutState::Debug(
+                        DebugState::UpdatePositions,
+                    )))
+                    .in_set(VisualizerStates::AfterIteration),
+                (place_nodes)
+                    .run_if(in_layout_state(LayoutState::Normal(
+                        NormalState::PlaceDestinations,
+                    )))
+                    .in_set(VisualizerStates::AfterIteration),
+                (debug_show_forces).in_set(VisualizerStates::AfterIteration),
+                (debug_remove_forces)
+                    .run_if(in_layout_state(LayoutState::Debug(
+                        DebugState::RemoveForces,
+                    )))
                     .in_set(VisualizerStates::AfterIteration),
             ),
         );
-        // todo!("Add Layout Visualizer Logic");
     }
 }
 
@@ -66,9 +80,6 @@ impl From<Vec2> for Destination {
     }
 }
 
-#[derive(Message, Deref)]
-pub struct NodeDestinations(Vec<Vec2>);
-
 fn spawn_graph(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -94,48 +105,204 @@ fn spawn_graph(
     commands.spawn_batch(nodes);
 }
 
-fn attach_destinations(
-    mut new_destinations: MessageReader<NodeDestinations>,
-    nodes: Query<(&Index, Entity), With<NodeMarker>>,
-    mut commands: Commands,
-) {
-    let Some(destinations) = new_destinations.read().last() else {
-        return;
-    };
-    for (idx, entity) in nodes {
-        let Some(destination) = destinations.get(**idx) else {
-            continue;
-        };
-        commands
-            .entity(entity)
-            .insert(Destination::from(*destination));
-    }
-}
-
-fn place_nodes(
+fn debug_place_nodes(
+    mut mode: ResMut<LayoutMode>,
     nodes: Query<(&mut Transform, &Destination, Entity), With<NodeMarker>>,
     mut commands: Commands,
-    mut layout_mode: ResMut<LayoutMode>,
 ) {
     for (mut transform, destination, entity) in nodes {
         transform.translation = destination.extend(0.0);
         commands.entity(entity).remove::<Destination>();
     }
-    *layout_mode = LayoutMode::DebugStop;
+    mode.state = LayoutState::Debug(DebugState::Stop);
+}
+
+fn place_nodes(
+    mut mode: ResMut<LayoutMode>,
+    nodes: Query<(&mut Transform, &Destination, Entity), With<NodeMarker>>,
+    mut commands: Commands,
+) {
+    for (mut transform, destination, entity) in nodes {
+        transform.translation = destination.extend(0.0);
+        commands.entity(entity).remove::<Destination>();
+    }
+    mode.state = LayoutState::Normal(NormalState::Stop);
+}
+
+#[derive(Component)]
+pub struct ArrowMarker;
+
+#[derive(Bundle)]
+pub struct ArrowShaftBundle {
+    pub marker: ArrowMarker,
+    pub mesh: Mesh2d,
+    pub material: MeshMaterial2d<ColorMaterial>,
+    pub transform: Transform,
+}
+
+#[derive(Bundle)]
+pub struct ArrowTipBundle {
+    pub marker: ArrowMarker,
+    pub mesh: Mesh2d,
+    pub material: MeshMaterial2d<ColorMaterial>,
+    pub transform: Transform,
 }
 
 fn debug_show_forces(
     nodes: Query<(&Index, &Transform), With<NodeMarker>>,
     mut commands: Commands,
-    mut layout_mode: ResMut<LayoutMode>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut mode: ResMut<LayoutMode>,
 ) {
-    let LayoutMode::DebugShowForces { forces } = &*layout_mode else {
+    let LayoutState::Debug(DebugState::ShowForces {
+        forces,
+        destinations,
+    }) = &mode.state
+    else {
         return;
     };
-    *layout_mode = LayoutMode::DebugStopBeforeUpdate;
-    for (&Index(idx), transform) in nodes {
+
+    for (&Index(idx), transform) in nodes.iter() {
         let origin = transform.translation;
+        let shaft_thickness = 2.0;
+        let tip_thickness = shaft_thickness * 10.0;
+
+        for force in forces {
+            let displacement = force[idx].extend(0.0);
+            draw_arrow(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                origin,
+                displacement,
+                shaft_thickness,
+                tip_thickness,
+                Color::srgb(1.0, 0.0, 0.0),
+                0.9,
+            );
+        }
+        let destination = destinations[idx].extend(0.0);
+        draw_arrow(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            origin,
+            destination - origin,
+            shaft_thickness,
+            tip_thickness,
+            Color::srgb(0.0, 1.0, 0.0),
+            0.9,
+        );
     }
+    mode.state = LayoutState::Debug(DebugState::StopBeforeUpdate);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_arrow(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    origin: Vec3,
+    displacement: Vec3,
+    shaft_thickness: f32,
+    tip_thickness: f32,
+    color: Color,
+    shaft_tip_ratio: f32,
+) {
+    let direction = displacement - origin;
+    let (norm_dir, length) = direction.normalize_and_length();
+    let shaft = direction * shaft_tip_ratio;
+    let tip = direction * (1.0 - shaft_tip_ratio);
+    draw_arrow_shaft(
+        commands,
+        meshes,
+        materials,
+        origin,
+        shaft,
+        shaft_thickness,
+        color,
+    );
+    draw_arrow_tip(
+        commands,
+        meshes,
+        materials,
+        origin + shaft,
+        tip,
+        tip_thickness,
+        color,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_arrow_shaft(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    origin: Vec3,
+    dir: Vec3,
+    thickness: f32,
+    color: Color,
+) {
+    let midpoint = origin + dir / 2.0;
+    let angle = dir.y.atan2(dir.x);
+    let mesh = meshes.add(Rectangle::new(dir.length(), thickness));
+    let color = materials.add(color);
+    commands.spawn((
+        Mesh2d(mesh),
+        MeshMaterial2d(color),
+        ArrowMarker,
+        Transform {
+            translation: midpoint,
+            rotation: Quat::from_rotation_z(angle),
+            ..Default::default()
+        },
+    ));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_arrow_tip(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    origin: Vec3,
+    direction: Vec3,
+    thickness: f32,
+    color: Color,
+) {
+    let (norm_dir, length) = direction.normalize_and_length();
+    // 2. Compute perpendicular vector for base width
+    let perp = Vec3::new(-norm_dir.y, norm_dir.x, 0.0); // perpendicular in XY plane
+
+    // 3. Define triangle points
+    let tip = origin + norm_dir * length; // arrow tip point
+    let base_left = origin + perp * (thickness / 2.0); // left base
+    let base_right = origin - perp * (thickness / 2.0); // right base
+
+    // 4. Create the triangle mesh
+    let mesh_handle = meshes.add(Triangle2d::new(
+        tip.truncate(), // convert Vec3 to Vec2
+        base_left.truncate(),
+        base_right.truncate(),
+    ));
+    let color = materials.add(color);
+
+    // 5. Spawn the triangle as a 2D mesh
+    commands.spawn((
+        ArrowMarker,
+        Mesh2d(mesh_handle),
+        MeshMaterial2d(color),
+        Transform::default(),
+    ));
+}
+
+fn debug_remove_forces(
+    mut mode: ResMut<LayoutMode>,
+    forces: Query<Entity, With<ArrowMarker>>,
+    mut commands: Commands,
+) {
+    forces.iter().for_each(|e| commands.entity(e).despawn());
+    mode.state = LayoutState::Debug(DebugState::UpdatePositions);
 }
 
 fn move_nodes(

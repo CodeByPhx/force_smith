@@ -7,7 +7,7 @@ use force_smith_macros::Parameterized;
 
 #[derive(Parameterized)]
 pub struct Config {
-    #[parameter(name = "Hello world")]
+    #[parameter()]
     temperature: f32,
     #[parameter]
     ideal_edge_len: f32,
@@ -31,8 +31,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             temperature: 100.0,
-            ideal_edge_len: 10.0,
-            cooling_fn: |t| t * 0.99,
+            ideal_edge_len: 100.0,
+            cooling_fn: |t| if t - 1.0 > 0.0 { t - 1.0 } else { 0.0 },
         }
     }
 }

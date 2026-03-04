@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
-use crate::visualizer::layout::LayoutMode;
+use crate::visualizer::layout::{DebugState, LayoutMode, LayoutState, NormalState};
 
 pub struct VisualizerControlUI;
 impl Plugin for VisualizerControlUI {
@@ -10,65 +10,58 @@ impl Plugin for VisualizerControlUI {
     }
 }
 
-pub struct VisualizerControlUiContext {
-    mode: ControlMode,
-}
-
-pub enum ControlMode {
-    Normal,
-    Debug,
-}
-
-fn visualizer_control_ui(mut contexts: EguiContexts, mut layout_mode: ResMut<LayoutMode>) {
+fn visualizer_control_ui(mut contexts: EguiContexts, mut mode: ResMut<LayoutMode>) {
     let Ok(context) = contexts.ctx_mut() else {
         return;
     };
     egui::Window::new("Layout Controls").show(context, |ui| {
-        // Selection Bar
         ui.vertical(|ui| {
             ui.heading("Mode Selection");
             ui.horizontal(|ui| {
                 if ui
-                    .radio(layout_mode.is_normal_mode(), "Normal Mode")
+                    .radio(matches!(mode.state, LayoutState::Normal(_)), "Normal Mode")
                     .clicked()
                 {
                     info!("Normal Mode pressed");
-                    // send cleanup debug mode message
-                    *layout_mode = LayoutMode::Stop;
+                    mode.set_mode_changed();
+                    mode.state = LayoutState::Normal(NormalState::Stop);
                 };
                 if ui
-                    .radio(layout_mode.is_debug_mode(), "Debug Mode")
+                    .radio(matches!(mode.state, LayoutState::Debug(_)), "Debug Mode")
                     .clicked()
                 {
-                    // send cleanup normal mode message
-                    *layout_mode = LayoutMode::DebugStop;
+                    mode.set_mode_changed();
+                    mode.state = LayoutState::Debug(DebugState::Stop);
                 }
             });
-            if layout_mode.is_normal_mode() {
-                ui.heading("Normal Mode");
-                if ui.radio(layout_mode.is_run(), "▶").clicked() {
-                    *layout_mode = LayoutMode::Run;
+            match &mut mode.state {
+                LayoutState::Normal(normal_state) => {
+                    ui.heading("Normal Mode");
+                    if matches!(normal_state, NormalState::Run) && ui.button("⏹").clicked() {
+                        *normal_state = NormalState::PlaceDestinations;
+                    }
+                    if matches!(normal_state, NormalState::Stop) && ui.button("▶").clicked() {
+                        *normal_state = NormalState::Run;
+                    }
                 }
-                if ui.radio(layout_mode.is_stop(), "⏸").clicked() {
-                    *layout_mode = LayoutMode::Stop;
-                }
-            } else if layout_mode.is_debug_mode() {
-                ui.heading("Debug Mode");
-                if layout_mode.is_debug_stop() {
-                    ui.horizontal(|ui| {
-                        ui.label("Compute Forces");
-                        if ui.button("⏭").clicked() {
-                            *layout_mode = LayoutMode::DebugComputeForces;
-                        }
-                    });
-                }
-                if layout_mode.is_debug_stop_before_update() {
-                    ui.horizontal(|ui| {
-                        ui.label("Update Graph");
-                        if ui.button("⏭").clicked() {
-                            *layout_mode = LayoutMode::DebugUpdateGraph;
-                        }
-                    });
+                LayoutState::Debug(debug_state) => {
+                    ui.heading("Debug Mode");
+                    if matches!(debug_state, DebugState::Stop) {
+                        ui.horizontal(|ui| {
+                            ui.label("Compute Forces");
+                            if ui.button("⏭").clicked() {
+                                *debug_state = DebugState::Compute;
+                            }
+                        });
+                    }
+                    if matches!(debug_state, DebugState::StopBeforeUpdate) {
+                        ui.horizontal(|ui| {
+                            ui.label("Update Positions");
+                            if ui.button("⏭").clicked() {
+                                *debug_state = DebugState::RemoveForces;
+                            }
+                        });
+                    }
                 }
             }
         });

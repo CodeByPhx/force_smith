@@ -3,6 +3,7 @@ use crate::{
         Layout,
         types::{Displacements, Position, SomeContext},
     },
+    prelude::Parameter,
     visualizer::layout_trait::{DebugLayoutAlgorithm, Parameterized},
 };
 use bevy_math::Vec2;
@@ -12,16 +13,11 @@ impl<Vertex: Position, Edge, Context> Parameterized
 where
     Context: Parameterized,
 {
-    fn get_parameters(
-        &self,
-    ) -> std::collections::HashMap<String, crate::visualizer::layout_trait::Parameter> {
+    fn get_parameters(&self) -> Vec<(String, Parameter)> {
         self.context.get_parameters()
     }
 
-    fn update_parameters(
-        &mut self,
-        parameters: &std::collections::HashMap<String, crate::visualizer::layout_trait::Parameter>,
-    ) {
+    fn update_parameters(&mut self, parameters: &[(String, Parameter)]) {
         self.context.update_parameters(parameters);
     }
 }
@@ -33,7 +29,7 @@ impl<Vertex: Position, Edge, Context> DebugLayoutAlgorithm
         let mut forces: Vec<Vec<Vec2>> = Vec::with_capacity(self.forces.len());
         for step in &self.forces.0 {
             let mut debug_displacements =
-                Displacements::from(Vec::with_capacity(self.graph.vertices.len()));
+                Displacements::from(vec![Vec2::ZERO; self.graph.vertices.len()]);
             step.apply(
                 &self.graph.vertices,
                 &self.graph.edges,

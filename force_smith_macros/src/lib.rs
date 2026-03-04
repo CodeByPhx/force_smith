@@ -56,7 +56,7 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
                 parameters
             }
 
-            fn update_parameters(&mut self, parameters: &Vec<(String, ::force_smith::prelude::Parameter)>) {
+            fn update_parameters(&mut self, parameters: &[(String, ::force_smith::prelude::Parameter)]) {
                 #(#param_updates)*
             }
         }

@@ -5,119 +5,90 @@ use crate::visualizer::{
     layout_trait::{Parameter, VisualizableDebugLayout},
 };
 use bevy::prelude::*;
-use std::collections::HashMap;
 
 pub struct LayoutPlugin;
 impl Plugin for LayoutPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LayoutMode::default()).add_systems(
+        app.insert_resource(LayoutMode::default());
+        app.add_plugins(LayoutPluginNormalMode);
+        app.add_plugins(LayoutPluginDebugMode);
+        app.add_systems(
             Update,
             (
+                (cleanup_old_mode.run_if(layout_mode_changed))
+                    .in_set(VisualizerStates::BeforeIteration),
                 (
                     update_layout_config.run_if(resource_changed::<LayoutConfigResource>),
                     update_layout_graph.run_if(resource_changed::<GraphResource>),
                 )
-                    .before(CoreIteration),
-                (
-                    iterate_layout.run_if(deref_res(LayoutMode::is_run)),
-                    iterate_layout_debug.run_if(deref_res(LayoutMode::is_debug_compute_forces)),
-                    attach_destinations
-                        .run_if(
-                            deref_res(LayoutMode::is_run)
-                                .or(deref_res(LayoutMode::is_debug_update_graph)),
-                        )
-                        .after(iterate_layout),
-                )
-                    .in_set(CoreIteration),
-            )
-                .in_set(VisualizerStates::Iteration),
+                    .in_set(VisualizerStates::BeforeIteration),
+            ),
         );
     }
 }
 
-#[derive(SystemSet, Eq, PartialEq, Hash, Debug, Clone, Copy)]
-struct CoreIteration;
-
-pub fn deref_res<T, F>(fun: F) -> impl Fn(Res<T>) -> bool
-where
-    T: Resource,
-    F: Fn(&T) -> bool + Copy,
-{
-    move |res: Res<T>| fun(&*res)
+fn cleanup_old_mode(mut mode: ResMut<LayoutMode>) {
+    mode.mode_change = false;
+    info!("Mode change");
 }
 
+fn layout_mode_changed(mode: Res<LayoutMode>) -> bool {
+    mode.mode_change
+}
 #[derive(Resource, Default)]
-pub enum LayoutMode {
+pub struct LayoutMode {
+    pub state: LayoutState,
+    mode_change: bool,
+}
+impl LayoutMode {
+    pub fn set_mode_changed(&mut self) {
+        self.mode_change = true;
+    }
+}
+#[derive(PartialEq)]
+pub enum LayoutState {
+    Normal(NormalState),
+    Debug(DebugState),
+}
+pub fn in_layout_state(expected: LayoutState) -> impl Fn(Res<LayoutMode>) -> bool {
+    move |res: Res<LayoutMode>| res.state == expected
+}
+impl Default for LayoutState {
+    fn default() -> Self {
+        Self::Normal(NormalState::default())
+    }
+}
+#[derive(Default, PartialEq)]
+pub enum NormalState {
     Run,
     #[default]
     Stop,
-    DebugStop,
-    DebugComputeForces,
-    DebugShowForces {
+    PlaceDestinations,
+}
+#[derive(Default, PartialEq)]
+pub enum DebugState {
+    #[default]
+    Stop,
+    Compute,
+    ShowForces {
         forces: Vec<Vec<Vec2>>,
+        destinations: Vec<Vec2>,
     },
-    DebugStopBeforeUpdate,
-    DebugUpdateGraph,
-}
-impl LayoutMode {
-    pub fn is_normal_mode(&self) -> bool {
-        matches!(self, LayoutMode::Run | LayoutMode::Stop)
-    }
-    pub fn is_debug_mode(&self) -> bool {
-        match self {
-            LayoutMode::DebugStop => true,
-            LayoutMode::DebugComputeForces => true,
-            LayoutMode::DebugShowForces { forces: _ } => true,
-            LayoutMode::DebugStopBeforeUpdate => true,
-            LayoutMode::DebugUpdateGraph => todo!(),
-            _ => false,
-        }
-    }
-    pub fn is_run(&self) -> bool {
-        matches!(self, LayoutMode::Run)
-    }
-    pub fn is_stop(&self) -> bool {
-        matches!(self, LayoutMode::Stop)
-    }
-    pub fn is_debug_stop(&self) -> bool {
-        matches!(self, LayoutMode::DebugStop)
-    }
-    pub fn is_debug_compute_forces(&self) -> bool {
-        matches!(self, LayoutMode::DebugComputeForces)
-    }
-    pub fn is_debug_show_forces(&self) -> bool {
-        matches!(self, LayoutMode::DebugShowForces { forces: _ })
-    }
-    pub fn is_debug_stop_before_update(&self) -> bool {
-        matches!(self, LayoutMode::DebugStopBeforeUpdate)
-    }
-    pub fn is_debug_update_graph(&self) -> bool {
-        matches!(self, LayoutMode::DebugUpdateGraph)
-    }
+    StopBeforeUpdate,
+    RemoveForces,
+    UpdatePositions,
 }
 
-#[derive(Deref, DerefMut)]
-pub struct LayoutResource(Box<dyn VisualizableDebugLayout>);
-impl From<Box<dyn VisualizableDebugLayout>> for LayoutResource {
-    fn from(value: Box<dyn VisualizableDebugLayout>) -> Self {
-        Self(value)
+pub struct LayoutPluginNormalMode;
+impl Plugin for LayoutPluginNormalMode {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (iterate_layout, attach_destinations.after(iterate_layout))
+                .run_if(in_layout_state(LayoutState::Normal(NormalState::Run)))
+                .in_set(VisualizerStates::Iteration),
+        );
     }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct LayoutConfigResource(HashMap<String, Parameter>);
-impl From<HashMap<String, Parameter>> for LayoutConfigResource {
-    fn from(value: HashMap<String, Parameter>) -> Self {
-        Self(value)
-    }
-}
-
-fn update_layout_config(config: Res<LayoutConfigResource>, mut layout: NonSendMut<LayoutResource>) {
-    layout.update_parameters(&config);
-}
-
-fn update_layout_graph(graph: Res<GraphResource>, mut layout: NonSendMut<LayoutResource>) {
-    layout.set_graph(&graph);
 }
 
 fn iterate_layout(mut layout: NonSendMut<LayoutResource>) {
@@ -135,10 +106,95 @@ fn attach_destinations(
     }
 }
 
-fn iterate_layout_debug(
-    mut layout: NonSendMut<LayoutResource>,
-    mut layout_mode: ResMut<LayoutMode>,
-) {
+pub struct LayoutPluginDebugMode;
+impl Plugin for LayoutPluginDebugMode {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                iterate_layout_debug,
+                attach_destinations.after(iterate_layout_debug),
+            )
+                .run_if(in_layout_state(LayoutState::Debug(DebugState::Compute)))
+                .in_set(VisualizerStates::Iteration),
+        );
+    }
+}
+
+fn iterate_layout_debug(mut layout: NonSendMut<LayoutResource>, mut mode: ResMut<LayoutMode>) {
     let forces = layout.iterate_debug();
-    *layout_mode = LayoutMode::DebugShowForces { forces };
+    let destinations = layout.get_positions();
+    mode.state = LayoutState::Debug(DebugState::ShowForces {
+        forces,
+        destinations,
+    });
+}
+
+#[derive(Deref, DerefMut)]
+pub struct LayoutResource(Box<dyn VisualizableDebugLayout>);
+impl From<Box<dyn VisualizableDebugLayout>> for LayoutResource {
+    fn from(value: Box<dyn VisualizableDebugLayout>) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct LayoutConfigResource(Vec<(String, DeltaParameter)>);
+#[derive(Debug)]
+pub struct DeltaParameter {
+    current: Parameter,
+    previous: Parameter,
+}
+impl DeltaParameter {
+    pub fn changed(&self) -> bool {
+        self.current != self.previous
+    }
+    pub fn uncheck_change(&mut self) {
+        self.previous = self.current;
+    }
+}
+impl std::ops::DerefMut for DeltaParameter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.current
+    }
+}
+impl std::ops::Deref for DeltaParameter {
+    type Target = Parameter;
+    fn deref(&self) -> &Self::Target {
+        &self.current
+    }
+}
+impl From<Parameter> for DeltaParameter {
+    fn from(value: Parameter) -> Self {
+        Self {
+            current: value,
+            previous: value,
+        }
+    }
+}
+impl From<Vec<(String, Parameter)>> for LayoutConfigResource {
+    fn from(value: Vec<(String, Parameter)>) -> Self {
+        Self(
+            value
+                .into_iter()
+                .map(|(name, value)| (name, DeltaParameter::from(value)))
+                .collect(),
+        )
+    }
+}
+
+fn update_layout_config(
+    mut config: ResMut<LayoutConfigResource>,
+    mut layout: NonSendMut<LayoutResource>,
+) {
+    let mut changed_parameters: Vec<(String, Parameter)> = Vec::new();
+    for (name, value) in config.iter_mut().filter(|(_, param)| param.changed()) {
+        value.uncheck_change();
+        changed_parameters.push((name.clone(), value.current.clone()));
+    }
+    layout.update_parameters(&changed_parameters);
+}
+
+fn update_layout_graph(graph: Res<GraphResource>, mut layout: NonSendMut<LayoutResource>) {
+    layout.set_graph(&graph);
 }

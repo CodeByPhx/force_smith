@@ -1,7 +1,6 @@
 use crate::layout::LayoutAlgorithm;
 use bevy_egui::egui::{self, Ui};
 use bevy_math::Vec2;
-use std::collections::HashMap;
 
 pub trait VisualizableDebugLayout: LayoutAlgorithm + DebugLayoutAlgorithm + Parameterized {}
 
@@ -9,15 +8,15 @@ impl<T> VisualizableDebugLayout for T where T: LayoutAlgorithm + DebugLayoutAlgo
 {}
 
 pub trait Parameterized {
-    fn get_parameters(&self) -> HashMap<String, Parameter>;
-    fn update_parameters(&mut self, parameters: &HashMap<String, Parameter>);
+    fn get_parameters(&self) -> Vec<(String, Parameter)>;
+    fn update_parameters(&mut self, parameters: &[(String, Parameter)]);
 }
 
 pub trait DebugLayoutAlgorithm {
     fn iterate_debug(&mut self) -> Vec<Vec<Vec2>>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Parameter {
     Float(f32),
     Integer(i32),
