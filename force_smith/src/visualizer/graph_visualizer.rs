@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::visualizer::{
     VisualizerStates,
@@ -10,6 +10,7 @@ pub struct GraphVisualizerPlugin;
 impl Plugin for GraphVisualizerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GraphVisualizerPluginConfig::default());
+        app.add_systems(Startup, add_node_assets);
         app.add_systems(
             Update,
             (
@@ -86,6 +87,7 @@ impl From<usize> for Index {
         Self(value)
     }
 }
+
 #[derive(Bundle)]
 pub struct NodeBundle {
     pub marker: NodeMarker,
@@ -94,6 +96,24 @@ pub struct NodeBundle {
     pub material: MeshMaterial2d<ColorMaterial>,
     pub transform: Transform,
 }
+
+#[derive(Resource)]
+pub struct NodeAssets {
+    mesh: Handle<Mesh>,
+    material: Handle<ColorMaterial>,
+}
+fn add_node_assets(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut commands: Commands,
+    config: Res<GraphVisualizerPluginConfig>,
+) {
+    commands.insert_resource(NodeAssets {
+        mesh: meshes.add(Circle::new(config.node_radius)),
+        material: materials.add(config.node_color),
+    });
+}
+
 #[derive(Component, Deref, DerefMut)]
 pub struct Destination(pub Vec2);
 impl From<Vec2> for Destination {
@@ -104,17 +124,15 @@ impl From<Vec2> for Destination {
 
 fn spawn_graph(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut material: ResMut<Assets<ColorMaterial>>,
     old_nodes: Query<Entity, With<NodeMarker>>,
+    node_assets: Res<NodeAssets>,
     graph: Res<GraphResource>,
-    config: Res<GraphVisualizerPluginConfig>,
 ) {
     old_nodes.iter().for_each(|e| commands.entity(e).despawn());
 
     let mut nodes: Vec<NodeBundle> = Vec::with_capacity(graph.vertices.len());
-    let mesh = meshes.add(Circle::new(config.node_radius));
-    let material = material.add(config.node_color);
+    let mesh = node_assets.mesh.clone();
+    let material = node_assets.material.clone();
     for (idx, position) in graph.vertices.iter().enumerate() {
         nodes.push(NodeBundle {
             marker: NodeMarker,
@@ -275,19 +293,34 @@ fn draw_arrow_tip2d(
 ) {
     let start2d = start.truncate();
     let end2d = end.truncate();
-    let norm_direction2d = (end2d - start2d).normalize();
+    let dir = end2d - start2d;
+    let length = dir.length();
+    if length == 0.0 {
+        return;
+    }
 
-    let perp = Vec2::new(-norm_direction2d.y, norm_direction2d.x) * thickness / 2.0;
+    let norm_dir = dir / length;
+    let angle = norm_dir.y.atan2(norm_dir.x);
 
-    let triangle = Triangle2d::new(start2d + perp, end2d, start2d - perp);
-    let mesh = meshes.add(triangle);
+    let unit_tip = Triangle2d::new(
+        Vec2::new(1.0, 0.0),
+        Vec2::new(-1.0, -1.0),
+        Vec2::new(-1.0, 1.0),
+    );
+    let mesh = meshes.add(Mesh::from(unit_tip));
     let material = materials.add(color);
 
     commands.spawn((
         Mesh2d(mesh),
         MeshMaterial2d(material),
+        Transform {
+            // position tip at `end`
+            translation: Vec3::new(end.x, end.y, start.z),
+            rotation: Quat::from_rotation_z(angle),
+            // scale x to arrow length, y to thickness, z = 1
+            scale: Vec3::new(length, thickness / 2.0, 1.0),
+        },
         ArrowMarker,
-        Transform::default(),
     ));
 }
 
