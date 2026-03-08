@@ -111,7 +111,12 @@ fn debug_place_nodes(
     mut commands: Commands,
 ) {
     for (mut transform, destination, entity) in nodes {
+        info!(
+            "Pos old : {}, pos new : {}",
+            transform.translation, destination.0
+        );
         transform.translation = destination.extend(0.0);
+
         commands.entity(entity).remove::<Destination>();
     }
     mode.state = LayoutState::Debug(DebugState::Stop);
@@ -170,12 +175,13 @@ fn debug_show_forces(
 
         for force in forces {
             let displacement = force[idx].extend(0.0);
-            draw_arrow(
+            let end = origin + displacement;
+            draw_arrow2d(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
                 origin,
-                displacement,
+                end,
                 shaft_thickness,
                 tip_thickness,
                 Color::srgb(1.0, 0.0, 0.0),
@@ -183,12 +189,12 @@ fn debug_show_forces(
             );
         }
         let destination = destinations[idx].extend(0.0);
-        draw_arrow(
+        draw_arrow2d(
             &mut commands,
             &mut meshes,
             &mut materials,
             origin,
-            destination - origin,
+            destination,
             shaft_thickness,
             tip_thickness,
             Color::srgb(0.0, 1.0, 0.0),
@@ -199,100 +205,93 @@ fn debug_show_forces(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_arrow(
+fn draw_arrow2d(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
-    origin: Vec3,
-    displacement: Vec3,
+    start: Vec3,
+    end: Vec3,
     shaft_thickness: f32,
     tip_thickness: f32,
     color: Color,
     shaft_tip_ratio: f32,
 ) {
-    let direction = displacement - origin;
-    let (norm_dir, length) = direction.normalize_and_length();
-    let shaft = direction * shaft_tip_ratio;
-    let tip = direction * (1.0 - shaft_tip_ratio);
-    draw_arrow_shaft(
+    let direction = end - start;
+    let shaft_start = start;
+    let shaft_end = start + direction * shaft_tip_ratio;
+    let tip_start = shaft_end;
+    let tip_end = end;
+
+    draw_arrow_shaft2d(
         commands,
         meshes,
         materials,
-        origin,
-        shaft,
+        shaft_start,
+        shaft_end,
         shaft_thickness,
         color,
     );
-    draw_arrow_tip(
+    draw_arrow_tip2d(
         commands,
         meshes,
         materials,
-        origin + shaft,
-        tip,
+        tip_start,
+        tip_end,
         tip_thickness,
         color,
     );
 }
 
-#[allow(clippy::too_many_arguments)]
-fn draw_arrow_shaft(
+fn draw_arrow_tip2d(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
-    origin: Vec3,
-    dir: Vec3,
+    start: Vec3,
+    end: Vec3,
     thickness: f32,
     color: Color,
 ) {
-    let midpoint = origin + dir / 2.0;
-    let angle = dir.y.atan2(dir.x);
-    let mesh = meshes.add(Rectangle::new(dir.length(), thickness));
-    let color = materials.add(color);
+    let start2d = start.truncate();
+    let end2d = end.truncate();
+    let norm_direction2d = (end2d - start2d).normalize();
+
+    let perp = Vec2::new(-norm_direction2d.y, norm_direction2d.x) * thickness / 2.0;
+
+    let triangle = Triangle2d::new(start2d + perp, end2d, start2d - perp);
+    let mesh = meshes.add(triangle);
+    let material = materials.add(color);
+
     commands.spawn((
         Mesh2d(mesh),
-        MeshMaterial2d(color),
+        MeshMaterial2d(material),
+        ArrowMarker,
+        Transform::default(),
+    ));
+}
+
+fn draw_arrow_shaft2d(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    start: Vec3,
+    end: Vec3,
+    thickness: f32,
+    color: Color,
+) {
+    let direction = end - start;
+    let midpoint = start + direction / 2.0;
+    let angle = direction.truncate().to_angle();
+    let mesh = meshes.add(Rectangle::new(1.0, 1.0));
+    let material = materials.add(color);
+    commands.spawn((
+        Mesh2d(mesh),
+        MeshMaterial2d(material),
         ArrowMarker,
         Transform {
             translation: midpoint,
             rotation: Quat::from_rotation_z(angle),
-            ..Default::default()
+            scale: Vec3::new(direction.length(), thickness, 1.0),
         },
-    ));
-}
-
-#[allow(clippy::too_many_arguments)]
-fn draw_arrow_tip(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    origin: Vec3,
-    direction: Vec3,
-    thickness: f32,
-    color: Color,
-) {
-    let (norm_dir, length) = direction.normalize_and_length();
-    // 2. Compute perpendicular vector for base width
-    let perp = Vec3::new(-norm_dir.y, norm_dir.x, 0.0); // perpendicular in XY plane
-
-    // 3. Define triangle points
-    let tip = origin + norm_dir * length; // arrow tip point
-    let base_left = origin + perp * (thickness / 2.0); // left base
-    let base_right = origin - perp * (thickness / 2.0); // right base
-
-    // 4. Create the triangle mesh
-    let mesh_handle = meshes.add(Triangle2d::new(
-        tip.truncate(), // convert Vec3 to Vec2
-        base_left.truncate(),
-        base_right.truncate(),
-    ));
-    let color = materials.add(color);
-
-    // 5. Spawn the triangle as a 2D mesh
-    commands.spawn((
-        ArrowMarker,
-        Mesh2d(mesh_handle),
-        MeshMaterial2d(color),
-        Transform::default(),
     ));
 }
 

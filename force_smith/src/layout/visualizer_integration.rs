@@ -6,6 +6,7 @@ use crate::{
     prelude::Parameter,
     visualizer::layout_trait::{DebugLayoutAlgorithm, Parameterized},
 };
+use bevy::log::info;
 use bevy_math::Vec2;
 
 impl<Vertex: Position, Edge, Context> Parameterized
@@ -27,6 +28,7 @@ impl<Vertex: Position, Edge, Context> DebugLayoutAlgorithm
 {
     fn iterate_debug(&mut self) -> Vec<Vec<Vec2>> {
         let mut forces: Vec<Vec<Vec2>> = Vec::with_capacity(self.forces.len());
+        self.displacements = vec![Vec2::ZERO; self.graph.vertices.len()].into();
         for step in &self.forces.0 {
             let mut debug_displacements =
                 Displacements::from(vec![Vec2::ZERO; self.graph.vertices.len()]);
@@ -36,11 +38,16 @@ impl<Vertex: Position, Edge, Context> DebugLayoutAlgorithm
                 &self.context,
                 &mut debug_displacements,
             );
-            for debug_displacement in &debug_displacements.0 {
-                self.displacements.push(*debug_displacement);
+            for (idx, debug_displacement) in debug_displacements.0.iter().enumerate() {
+                self.displacements[idx] += *debug_displacement;
             }
             forces.push(debug_displacements.0);
         }
+        (self.position_update_fn)(
+            &self.displacements,
+            &mut self.graph.vertices,
+            &mut self.context,
+        );
         forces
     }
 }

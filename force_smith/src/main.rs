@@ -1,3 +1,4 @@
+use bevy::log::info;
 use bevy_math::Vec2;
 use force_smith::builder::LayoutBuilder;
 use force_smith::layout::types::{Force, VertexPair};
@@ -64,6 +65,7 @@ fn main() {
                 let displacement = displacements[idx];
                 let clamped_displacement = displacement.clamp_length(0.0, ctx.temperature);
                 vertices[idx] += clamped_displacement;
+                info!("target destination is: {:?}", vertices[idx]);
             }
             ctx.temperature = (ctx.cooling_fn)(ctx.temperature);
         })
