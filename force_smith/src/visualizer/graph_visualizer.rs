@@ -10,7 +10,7 @@ pub struct GraphVisualizerPlugin;
 impl Plugin for GraphVisualizerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GraphVisualizerPluginConfig::default());
-        app.add_systems(Startup, add_node_assets);
+        app.add_systems(Startup, (add_node_assets, add_arrow_assets));
         app.add_systems(
             Update,
             (
@@ -151,10 +151,6 @@ fn debug_place_nodes(
     mut commands: Commands,
 ) {
     for (mut transform, destination, entity) in nodes {
-        info!(
-            "Pos old : {}, pos new : {}",
-            transform.translation, destination.0
-        );
         transform.translation = destination.extend(0.0);
 
         commands.entity(entity).remove::<Destination>();
@@ -196,8 +192,7 @@ pub struct ArrowTipBundle {
 fn debug_show_forces(
     nodes: Query<(&Index, &Transform), With<NodeMarker>>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    arrow_assets: Res<ArrowAssets>,
     mut mode: ResMut<LayoutMode>,
 ) {
     let LayoutState::Debug(DebugState::ShowForces {
@@ -218,42 +213,81 @@ fn debug_show_forces(
             let end = origin + displacement;
             draw_arrow2d(
                 &mut commands,
-                &mut meshes,
-                &mut materials,
+                &arrow_assets,
                 origin,
                 end,
                 shaft_thickness,
                 tip_thickness,
-                Color::srgb(1.0, 0.0, 0.0),
+                ArrowColorVariants::Red,
                 0.9,
             );
         }
         let destination = destinations[idx].extend(0.0);
         draw_arrow2d(
             &mut commands,
-            &mut meshes,
-            &mut materials,
+            &arrow_assets,
             origin,
             destination,
             shaft_thickness,
             tip_thickness,
-            Color::srgb(0.0, 1.0, 0.0),
+            ArrowColorVariants::Green,
             0.9,
         );
     }
     mode.state = LayoutState::Debug(DebugState::StopBeforeUpdate);
 }
 
+#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+pub enum ArrowColorVariants {
+    Red,
+    Green,
+}
+impl ArrowColorVariants {
+    pub const ALL: [Self; 2] = [Self::Red, Self::Green];
+
+    fn to_color(self) -> Color {
+        match self {
+            ArrowColorVariants::Red => Color::srgb(1.0, 0.0, 0.0),
+            ArrowColorVariants::Green => Color::srgb(0.0, 1.0, 0.0),
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct ArrowAssets {
+    shaft_unit_mesh: Handle<Mesh>,
+    tip_unit_mesh: Handle<Mesh>,
+    materials: HashMap<ArrowColorVariants, Handle<ColorMaterial>>,
+}
+
+fn add_arrow_assets(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    commands.insert_resource(ArrowAssets {
+        shaft_unit_mesh: meshes.add(Rectangle::new(1.0, 1.0)),
+        tip_unit_mesh: meshes.add(Triangle2d::new(
+            Vec2::new(1.0, 0.0),
+            Vec2::new(-1.0, -1.0),
+            Vec2::new(-1.0, 1.0),
+        )),
+        materials: ArrowColorVariants::ALL
+            .iter()
+            .map(|c| (*c, materials.add(c.to_color())))
+            .collect(),
+    });
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_arrow2d(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    arrow_assets: &Res<ArrowAssets>,
     start: Vec3,
     end: Vec3,
     shaft_thickness: f32,
     tip_thickness: f32,
-    color: Color,
+    color: ArrowColorVariants,
     shaft_tip_ratio: f32,
 ) {
     let direction = end - start;
@@ -264,8 +298,7 @@ fn draw_arrow2d(
 
     draw_arrow_shaft2d(
         commands,
-        meshes,
-        materials,
+        arrow_assets,
         shaft_start,
         shaft_end,
         shaft_thickness,
@@ -273,8 +306,7 @@ fn draw_arrow2d(
     );
     draw_arrow_tip2d(
         commands,
-        meshes,
-        materials,
+        arrow_assets,
         tip_start,
         tip_end,
         tip_thickness,
@@ -284,12 +316,11 @@ fn draw_arrow2d(
 
 fn draw_arrow_tip2d(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    arrow_assets: &Res<ArrowAssets>,
     start: Vec3,
     end: Vec3,
     thickness: f32,
-    color: Color,
+    color: ArrowColorVariants,
 ) {
     let start2d = start.truncate();
     let end2d = end.truncate();
@@ -299,25 +330,17 @@ fn draw_arrow_tip2d(
         return;
     }
 
-    let norm_dir = dir / length;
-    let angle = norm_dir.y.atan2(norm_dir.x);
+    let angle = dir.to_angle();
 
-    let unit_tip = Triangle2d::new(
-        Vec2::new(1.0, 0.0),
-        Vec2::new(-1.0, -1.0),
-        Vec2::new(-1.0, 1.0),
-    );
-    let mesh = meshes.add(Mesh::from(unit_tip));
-    let material = materials.add(color);
+    let mesh = arrow_assets.tip_unit_mesh.clone();
+    let material = arrow_assets.materials.get(&color).unwrap().clone();
 
     commands.spawn((
         Mesh2d(mesh),
         MeshMaterial2d(material),
         Transform {
-            // position tip at `end`
             translation: Vec3::new(end.x, end.y, start.z),
             rotation: Quat::from_rotation_z(angle),
-            // scale x to arrow length, y to thickness, z = 1
             scale: Vec3::new(length, thickness / 2.0, 1.0),
         },
         ArrowMarker,
@@ -326,18 +349,17 @@ fn draw_arrow_tip2d(
 
 fn draw_arrow_shaft2d(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    arrow_assets: &Res<ArrowAssets>,
     start: Vec3,
     end: Vec3,
     thickness: f32,
-    color: Color,
+    color: ArrowColorVariants,
 ) {
     let direction = end - start;
     let midpoint = start + direction / 2.0;
     let angle = direction.truncate().to_angle();
-    let mesh = meshes.add(Rectangle::new(1.0, 1.0));
-    let material = materials.add(color);
+    let mesh = arrow_assets.shaft_unit_mesh.clone();
+    let material = arrow_assets.materials.get(&color).unwrap().clone();
     commands.spawn((
         Mesh2d(mesh),
         MeshMaterial2d(material),
