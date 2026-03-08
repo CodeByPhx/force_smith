@@ -13,6 +13,7 @@ impl Plugin for GraphVisualizerPlugin {
         app.add_systems(
             Update,
             (
+                (cleanup_debug_mode).run_if(layout_mode_changed_to_normal),
                 (spawn_graph.run_if(resource_changed::<GraphResource>),)
                     .in_set(VisualizerStates::BeforeIteration),
                 (move_nodes)
@@ -36,6 +37,27 @@ impl Plugin for GraphVisualizerPlugin {
                     .in_set(VisualizerStates::AfterIteration),
             ),
         );
+    }
+}
+
+fn layout_mode_changed_to_normal(mode: Res<LayoutMode>) -> bool {
+    mode.mode_change && matches!(mode.state, LayoutState::Normal(_))
+}
+
+fn cleanup_debug_mode(
+    mut mode: ResMut<LayoutMode>,
+    forces: Query<Entity, With<ArrowMarker>>,
+    nodes: Query<(&mut Transform, &Destination, Entity), With<NodeMarker>>,
+    mut commands: Commands,
+) {
+    mode.mode_change = false;
+
+    forces.iter().for_each(|e| commands.entity(e).despawn());
+
+    for (mut transform, destination, entity) in nodes {
+        transform.translation = destination.extend(0.0);
+
+        commands.entity(entity).remove::<Destination>();
     }
 }
 

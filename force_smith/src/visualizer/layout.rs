@@ -14,31 +14,19 @@ impl Plugin for LayoutPlugin {
         app.add_plugins(LayoutPluginDebugMode);
         app.add_systems(
             Update,
-            (
-                (cleanup_old_mode.run_if(layout_mode_changed))
-                    .in_set(VisualizerStates::BeforeIteration),
-                (
-                    update_layout_config.run_if(resource_changed::<LayoutConfigResource>),
-                    update_layout_graph.run_if(resource_changed::<GraphResource>),
-                )
-                    .in_set(VisualizerStates::BeforeIteration),
-            ),
+            ((
+                update_layout_config.run_if(resource_changed::<LayoutConfigResource>),
+                update_layout_graph.run_if(resource_changed::<GraphResource>),
+            )
+                .in_set(VisualizerStates::BeforeIteration),),
         );
     }
 }
 
-fn cleanup_old_mode(mut mode: ResMut<LayoutMode>) {
-    mode.mode_change = false;
-    info!("Mode change");
-}
-
-fn layout_mode_changed(mode: Res<LayoutMode>) -> bool {
-    mode.mode_change
-}
 #[derive(Resource, Default)]
 pub struct LayoutMode {
     pub state: LayoutState,
-    mode_change: bool,
+    pub mode_change: bool,
 }
 impl LayoutMode {
     pub fn set_mode_changed(&mut self) {
