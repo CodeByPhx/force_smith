@@ -1,5 +1,5 @@
 [package]
-name = "force_smith"
+name = "force_visualizer"
 version = "0.1.0"
 edition = "2024"
 authors = ["CodeByPhx CodeByPhx@proton.me"]
@@ -11,12 +11,6 @@ keywords = ["graph", "layout", "visualization", "force-directed", "algorithm"]
 categories = ["graphics", "visualization", "algorithms"]
 exclude = ["/target", "/.gitignore", "/.github", "/.idea", "tests/*"]
 
-[features]
-# default = ["builder", "visualizer", "utils"]
-default = ["builder", "visualizer", "utils"]
-utils = []
-builder = []
-visualizer = ["bevy", "bevy_egui", "serde_json", "serde"]
 
 [dependencies]
 # force_smith_macros = "0.1.2"

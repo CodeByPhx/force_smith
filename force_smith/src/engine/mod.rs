@@ -1,0 +1,31 @@
+use bevy_math::Vec2;
+
+use crate::graph::Graph;
+
+pub mod layout_engine;
+pub mod types;
+
+pub trait LayoutAlgorithm {
+    fn load_graph(&mut self, graph: &Graph);
+    fn iterate(&mut self);
+    fn get_positions(&self) -> Vec<Vec2>;
+}
+
+pub trait AsVec2 {
+    fn as_ref_vec2(&self) -> &Vec2;
+    fn as_ref_mut_vec2(&mut self) -> &mut Vec2;
+    fn as_copy_vec2(&self) -> Vec2;
+}
+impl AsVec2 for Vec2 {
+    fn as_ref_vec2(&self) -> &Vec2 {
+        self
+    }
+
+    fn as_ref_mut_vec2(&mut self) -> &mut Vec2 {
+        self
+    }
+
+    fn as_copy_vec2(&self) -> Vec2 {
+        *self
+    }
+}
