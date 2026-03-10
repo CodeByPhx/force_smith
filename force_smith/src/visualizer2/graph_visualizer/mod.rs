@@ -19,7 +19,7 @@ use crate::{
 };
 
 mod bundles;
-mod config;
+pub mod config;
 
 pub struct GraphVisualizerPlugin;
 impl Plugin for GraphVisualizerPlugin {
@@ -38,7 +38,7 @@ impl Plugin for GraphVisualizerPlugin {
 
 fn redraw_edges(
     nodes: Query<(&Index, &Transform), With<NodeMarker>>,
-    mut edges: Query<(&EdgeIndices, &mut Transform), With<EdgeMarker>>,
+    mut edges: Query<(&EdgeIndices, &mut Transform), (With<EdgeMarker>, Without<NodeMarker>)>,
     config: Res<GraphVisualizerPluginConfig>,
 ) {
     let mut node_positions: Vec<(usize, Vec3)> = nodes

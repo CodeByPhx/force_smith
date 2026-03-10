@@ -11,5 +11,6 @@ pub use crate::utils::applicators::*;
 
 #[cfg(feature = "visualizer")]
 pub use crate::visualizer2::{
-    layout_trait::DebugLayoutAlgorithm, visualizer_configuration::VisualizerConfiguration,
+    layout_trait::DebugLayoutAlgorithm, layout_trait::Parameter, layout_trait::Parameterized,
+    visualize_dbg, visualizer_configuration::VisualizerConfiguration,
 };

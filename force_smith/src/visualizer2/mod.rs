@@ -1,4 +1,5 @@
 use crate::visualizer2::{
+    graph_visualizer::config::GraphVisualizerPluginConfig,
     layout::{
         config::LayoutPluginConfig,
         resource::{LayoutParameterResource, LayoutResource},
@@ -28,12 +29,14 @@ pub fn visualize_dbg(
         .insert_non_send_resource(layout_res)
         .insert_resource(layout_parameter_res)
         .insert_resource(LayoutPluginConfig::from(&config))
+        .insert_resource(GraphVisualizerPluginConfig::from(&config))
         .add_plugins((
             DefaultPlugins,
             world::WorldPlugin,
-            ui::UiPlugin,
-            layout::LayoutPlugin,
-            graph_visualizer::GraphVisualizerPlugin,
-            global_schedule::VisualizerSchedulePlugin,
-        ));
+            // ui::UiPlugin,
+            // layout::LayoutPlugin,
+            // graph_visualizer::GraphVisualizerPlugin,
+            // global_schedule::VisualizerSchedulePlugin,
+        ))
+        .run();
 }
