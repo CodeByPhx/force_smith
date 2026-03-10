@@ -36,11 +36,16 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
 
                 if include {
                     param_entries.push(quote! {
-                        parameters.push((#param_name.to_string(), ::force_smith::prelude::ToParameter::to_parameter(&self.#field_name)));
+                        parameters.push(::force_smith::prelude::Parameter::new(
+                            #param_name,
+                            <_ as ::force_smith::visualizer::layout_trait::ToParameterValue>::to_parameter(&self.#field_name)
+                        ));
                     });
                     param_updates.push(quote! {
-                        if let Some(val) = parameters.iter().find(|(k, _)| k == #param_name).and_then(|(_, param)| <_ as ::force_smith::prelude::FromParameter>::from_parameter(param)) {
-                            self.#field_name = val;
+                        if let Some(param) = parameters.iter().find(|p| p.name == #param_name) {
+                            if let Some(val) = <_ as ::force_smith::visualizer::layout_trait::FromParameterValue>::from_parameter(&param.value) {
+                                self.#field_name = val;
+                            }
                         }
                     });
                 }
@@ -49,14 +54,14 @@ pub fn derive_parameterized(input: TokenStream) -> TokenStream {
     }
 
     let expanded = quote! {
-        impl ::force_smith::prelude::Parameterized for #struct_name {
-            fn get_parameters(&self) -> Vec<(String, ::force_smith::prelude::Parameter)> {
+        impl ::force_smith::visualizer::layout_trait::Parameterized for #struct_name {
+            fn get_parameters(&self) -> Vec<::force_smith::prelude::Parameter> {
                 let mut parameters = Vec::new();
                 #(#param_entries)*
                 parameters
             }
 
-            fn update_parameters(&mut self, parameters: &[(String, ::force_smith::prelude::Parameter)]) {
+            fn update_parameters(&mut self, parameters: &[::force_smith::prelude::Parameter]) {
                 #(#param_updates)*
             }
         }
