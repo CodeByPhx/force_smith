@@ -37,6 +37,7 @@ impl<Vertex, Edge, Context> LayoutAlgorithm for LayoutEngine<Vertex, Edge, Conte
 where
     Vertex: AsVec2,
     Context: Default,
+    Edge: AsEdge,
 {
     fn load_graph(&mut self, graph: &Graph) {
         self.context = Context::default();
@@ -66,5 +67,9 @@ where
             .iter()
             .map(AsVec2::as_copy_vec2)
             .collect()
+    }
+
+    fn get_edges(&self) -> Vec<crate::graph::Edge> {
+        self.graph.edges.iter().map(AsEdge::as_edge).collect()
     }
 }

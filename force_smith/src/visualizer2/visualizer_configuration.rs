@@ -1,7 +1,6 @@
-pub struct VisualizerConfiguration {}
+use crate::visualizer2::layout::config::LayoutPluginConfig;
 
-impl Default for VisualizerConfiguration {
-    fn default() -> Self {
-        Self {}
-    }
+#[derive(Default)]
+pub struct VisualizerConfiguration {
+    pub layout: LayoutPluginConfig,
 }

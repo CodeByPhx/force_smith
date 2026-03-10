@@ -1,16 +1,18 @@
 use bevy_math::Vec2;
 
 use crate::{
-    engine::{AsVec2, layout_engine::LayoutEngine, types::Displacements},
-    visualizer2::layout_trait::DebugLayoutAlgorithm,
+    engine::{AsEdge, AsVec2, layout_engine::LayoutEngine, types::Displacements},
+    prelude::DebugLayoutAlgorithm,
+    visualizer2::layout_trait::Parameterized,
 };
 
 impl<Vertex, Edge, Context> DebugLayoutAlgorithm for LayoutEngine<Vertex, Edge, Context>
 where
     Vertex: AsVec2,
     Context: Default,
+    Edge: AsEdge,
 {
-    fn iterate_dbg(&mut self) -> Vec<Vec<Vec2>> {
+    fn dbg_iterate(&mut self) -> Vec<Vec<Vec2>> {
         let mut forces: Vec<Vec<Vec2>> = Vec::with_capacity(self.forces.len());
         self.displacements = vec![Vec2::ZERO; self.graph.vertices.len()].into();
         for step in &self.forces {
@@ -33,5 +35,18 @@ where
             &mut self.context,
         );
         forces
+    }
+}
+
+impl<Vertex, Edge, Context> Parameterized for LayoutEngine<Vertex, Edge, Context>
+where
+    Context: Parameterized,
+{
+    fn get_parameters(&self) -> Vec<crate::visualizer2::layout_trait::Parameter> {
+        self.context.get_parameters()
+    }
+
+    fn update_parameters(&mut self, parameters: &[crate::visualizer2::layout_trait::Parameter]) {
+        self.context.update_parameters(parameters);
     }
 }

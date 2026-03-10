@@ -3,6 +3,10 @@ use bevy::prelude::*;
 pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        todo!()
+        app.add_systems(Startup, spawn_camera);
     }
+}
+
+fn spawn_camera(mut commands: Commands) {
+    commands.spawn(Camera2d);
 }

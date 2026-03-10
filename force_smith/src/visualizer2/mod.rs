@@ -1,10 +1,15 @@
 use crate::visualizer2::{
-    graph_visualizer::GraphVisualizerPlugin, layout::LayoutPlugin,
-    layout_trait::DebugLayoutAlgorithm, ui::UiPlugin,
-    visualizer_configuration::VisualizerConfiguration, world::WorldPlugin,
+    layout::{
+        config::LayoutPluginConfig,
+        resource::{LayoutParameterResource, LayoutResource},
+    },
+    layout_trait::ParameterizedDebugLayoutAlgorithm,
+    visualizer_configuration::VisualizerConfiguration,
 };
 use bevy::prelude::*;
 
+pub mod global_assets;
+pub mod global_schedule;
 mod graph_visualizer;
 mod layout;
 pub mod layout_trait;
@@ -12,15 +17,23 @@ mod ui;
 pub mod visualizer_configuration;
 mod world;
 
-#[cfg(feature = "visualize_dbg")]
-pub fn visualize_dbg(layout: Box<dyn DebugLayoutAlgorithm>, config: VisualizerConfiguration) {
-    let layout = layout::LayoutResource::from(layout);
+pub fn visualize_dbg(
+    layout: Box<dyn ParameterizedDebugLayoutAlgorithm>,
+    config: VisualizerConfiguration,
+) {
+    let layout_res = LayoutResource::from(layout);
+    let layout_parameter_res = LayoutParameterResource::from(layout_res.get_parameters());
 
-    App::new().add_plugins((
-        DefaultPlugins,
-        WorldPlugin,
-        UiPlugin,
-        LayoutPlugin,
-        GraphVisualizerPlugin,
-    ));
+    App::new()
+        .insert_non_send_resource(layout_res)
+        .insert_resource(layout_parameter_res)
+        .insert_resource(LayoutPluginConfig::from(&config))
+        .add_plugins((
+            DefaultPlugins,
+            world::WorldPlugin,
+            ui::UiPlugin,
+            layout::LayoutPlugin,
+            graph_visualizer::GraphVisualizerPlugin,
+            global_schedule::VisualizerSchedulePlugin,
+        ));
 }
