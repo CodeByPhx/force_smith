@@ -1,9 +1,9 @@
 [package]
 name = "force_smith"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
-authors = ["CodeByPhx CodeByPhx@proton.me"]
-description = "Force Smith is a toolkit that makes it easy to implement and develop new force-directed layout algorithms with built-in debugging and visualization capabilities."
+authors = ["CodeByPhx <CodeByPhx@proton.me>"]
+description = "A toolkit for implementing and developing force-directed layout algorithms with built-in debugging and visualization capabilities."
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/CodeByPhx/force_smith"
@@ -12,18 +12,18 @@ categories = ["graphics", "visualization", "algorithms"]
 exclude = ["/target", "/.gitignore", "/.github", "/.idea", "tests/*"]
 
 [features]
-# default = ["builder", "visualizer", "utils"]
-default = ["builder", "visualizer", "utils"]
+default = ["builder", "utils"]
 utils = []
 builder = []
-visualizer = ["bevy", "bevy_egui", "serde_json", "serde"]
+visualizer = ["bevy", "bevy_egui", "serde", "serde_json", "force_smith_macros"]
 
 [dependencies]
-# force_smith_macros = "0.1.2"
-force_smith_macros = { path = "../force_smith_macros/" }
-bevy_math = "0.18.0"
-bevy = { version = "0.17.2", optional = true }
-bevy_egui = { version = "0.38.0", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
-serde_json = { version = "1.0.145", optional = true }
-rand = "0.10.0-rc.5"
+bevy_math = "0.18.1"
+rand = "0.10.0"
+
+# Optional dependencies for visualizer feature
+force_smith_macros = { version = "1.0.0", optional = true }
+bevy = { version = "0.18.1", optional = true }
+bevy_egui = { version = "0.39.1", optional = true }
+serde = { version = "1.0.228", features = ["derive"], optional = true }
+serde_json = { version = "1.0.149", optional = true }

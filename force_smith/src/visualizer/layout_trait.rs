@@ -1,89 +1,101 @@
-use crate::layout::LayoutAlgorithm;
-use bevy_egui::egui::{self, Ui};
-use bevy_math::Vec2;
+use crate::prelude::*;
 
-pub trait VisualizableDebugLayout: LayoutAlgorithm + DebugLayoutAlgorithm + Parameterized {}
+pub trait DebugLayoutAlgorithm: LayoutAlgorithm {
+    fn dbg_iterate(&mut self) -> Vec<Vec<Vec2>>;
+}
 
-impl<T> VisualizableDebugLayout for T where T: LayoutAlgorithm + DebugLayoutAlgorithm + Parameterized
-{}
+pub trait ParameterizedDebugLayoutAlgorithm: DebugLayoutAlgorithm + Parameterized {}
+
+impl<T> ParameterizedDebugLayoutAlgorithm for T where T: DebugLayoutAlgorithm + Parameterized {}
 
 pub trait Parameterized {
-    fn get_parameters(&self) -> Vec<(String, Parameter)>;
-    fn update_parameters(&mut self, parameters: &[(String, Parameter)]);
+    fn get_parameters(&self) -> Vec<Parameter>;
+    fn update_parameters(&mut self, parameters: &[Parameter]);
 }
 
-pub trait DebugLayoutAlgorithm {
-    fn iterate_debug(&mut self) -> Vec<Vec<Vec2>>;
+#[derive(Clone, PartialEq)]
+pub struct Parameter {
+    pub name: String,
+    pub value: ParameterValue,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Parameter {
+impl Parameter {
+    pub fn new(name: impl Into<String>, value: ParameterValue) -> Self {
+        Self {
+            name: name.into(),
+            value,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum ParameterValue {
     Float(f32),
     Integer(i32),
     Bool(bool),
 }
-impl Parameter {
-    pub fn add_ui_element(&mut self, ui: &mut Ui) {
+
+impl ParameterValue {
+    /// Add UI element for this parameter using egui
+    #[cfg(feature = "visualizer")]
+    pub fn add_ui_element(&mut self, ui: &mut bevy_egui::egui::Ui) {
         match self {
-            Parameter::Float(v) => {
-                ui.add(egui::DragValue::new(v).speed(0.01));
+            ParameterValue::Float(v) => {
+                ui.add(bevy_egui::egui::DragValue::new(v).speed(0.01));
             }
-            Parameter::Integer(v) => {
-                ui.add(egui::DragValue::new(v).speed(1));
+            ParameterValue::Integer(v) => {
+                ui.add(bevy_egui::egui::DragValue::new(v));
             }
-            Parameter::Bool(v) => {
-                ui.checkbox(v, ());
+            ParameterValue::Bool(v) => {
+                ui.checkbox(v, "");
             }
         }
-    }
-}
-impl From<f32> for Parameter {
-    fn from(value: f32) -> Self {
-        Self::Float(value)
-    }
-}
-impl From<i32> for Parameter {
-    fn from(value: i32) -> Self {
-        Self::Integer(value)
-    }
-}
-impl From<bool> for Parameter {
-    fn from(value: bool) -> Self {
-        Self::Bool(value)
     }
 }
 
-pub trait FromParameter: Sized {
-    fn from_parameter(p: &Parameter) -> Option<Self>;
+pub trait FromParameterValue: Sized {
+    fn from_parameter(p: &ParameterValue) -> Option<Self>;
 }
-pub trait ToParameter {
-    fn to_parameter(&self) -> Parameter;
-}
-impl FromParameter for bool {
-    fn from_parameter(p: &Parameter) -> Option<Self> {
-        if let Parameter::Bool(value) = p {
-            Some(*value)
-        } else {
-            None
+impl FromParameterValue for bool {
+    fn from_parameter(p: &ParameterValue) -> Option<Self> {
+        match p {
+            ParameterValue::Bool(v) => Some(*v),
+            _ => None,
         }
     }
 }
-impl ToParameter for bool {
-    fn to_parameter(&self) -> Parameter {
-        Parameter::Bool(*self)
-    }
-}
-impl FromParameter for f32 {
-    fn from_parameter(p: &Parameter) -> Option<Self> {
-        if let Parameter::Float(value) = p {
-            Some(*value)
-        } else {
-            None
+impl FromParameterValue for f32 {
+    fn from_parameter(p: &ParameterValue) -> Option<Self> {
+        match p {
+            ParameterValue::Float(v) => Some(*v),
+            _ => None,
         }
     }
 }
-impl ToParameter for f32 {
-    fn to_parameter(&self) -> Parameter {
-        Parameter::Float(*self)
+impl FromParameterValue for i32 {
+    fn from_parameter(p: &ParameterValue) -> Option<Self> {
+        match p {
+            ParameterValue::Integer(v) => Some(*v),
+            _ => None,
+        }
+    }
+}
+
+pub trait ToParameterValue {
+    fn to_parameter(&self) -> ParameterValue;
+}
+impl ToParameterValue for bool {
+    fn to_parameter(&self) -> ParameterValue {
+        ParameterValue::Bool(*self)
+    }
+}
+impl ToParameterValue for f32 {
+    fn to_parameter(&self) -> ParameterValue {
+        ParameterValue::Float(*self)
+    }
+}
+impl ToParameterValue for i32 {
+    fn to_parameter(&self) -> ParameterValue {
+        ParameterValue::Integer(*self)
     }
 }

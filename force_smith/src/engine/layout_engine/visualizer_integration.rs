@@ -3,7 +3,7 @@ use bevy_math::Vec2;
 use crate::{
     engine::{AsEdge, AsVec2, layout_engine::LayoutEngine, types::Displacements},
     prelude::DebugLayoutAlgorithm,
-    visualizer2::layout_trait::Parameterized,
+    visualizer::layout_trait::Parameterized,
 };
 
 impl<Vertex, Edge, Context> DebugLayoutAlgorithm for LayoutEngine<Vertex, Edge, Context>
@@ -42,11 +42,11 @@ impl<Vertex, Edge, Context> Parameterized for LayoutEngine<Vertex, Edge, Context
 where
     Context: Parameterized,
 {
-    fn get_parameters(&self) -> Vec<crate::visualizer2::layout_trait::Parameter> {
+    fn get_parameters(&self) -> Vec<crate::visualizer::layout_trait::Parameter> {
         self.context.get_parameters()
     }
 
-    fn update_parameters(&mut self, parameters: &[crate::visualizer2::layout_trait::Parameter]) {
+    fn update_parameters(&mut self, parameters: &[crate::visualizer::layout_trait::Parameter]) {
         self.context.update_parameters(parameters);
     }
 }
