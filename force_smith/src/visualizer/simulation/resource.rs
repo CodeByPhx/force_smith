@@ -1,4 +1,5 @@
 use crate::graph::Graph;
+use crate::visualizer::layout_trait::ParameterValue;
 use crate::visualizer::rendering::SetInitialGraph;
 use crate::visualizer::{
     global_schedule::VisualizerStates,
@@ -12,11 +13,10 @@ impl Plugin for ResourcePlugin {
         app.add_message::<LoadGraph>().add_systems(
             Update,
             (
-                // Chain these systems to ensure parameters update before graph
                 update_layout_parameters.run_if(any_parameter_changed),
                 update_layout_graph.run_if(at_least_one_message::<LoadGraph>),
             )
-                .chain() // Ensures sequential execution within BeforeIteration
+                .chain()
                 .in_set(VisualizerStates::BeforeIteration),
         );
     }
@@ -35,7 +35,7 @@ fn update_layout_parameters(
         .filter(|p| p.check_changed())
         .map(|p| {
             p.set_unchanged();
-            p.clone()
+            Parameter::from(p)
         })
         .collect();
     layout.update_parameters(&changed_parameters);
@@ -53,7 +53,11 @@ fn update_layout_graph(
     let Some(LoadGraph(graph)) = load_graph.read().last() else {
         return;
     };
-    info!("Loading graph with {} vertices and {} edges", graph.vertices, graph.edges.len());
+    info!(
+        "Loading graph with {} vertices and {} edges",
+        graph.vertices,
+        graph.edges.len()
+    );
     layout.load_graph(graph);
     let positions = layout.get_positions();
     let edges = layout.get_edges();
@@ -83,46 +87,69 @@ impl From<Vec<Parameter>> for LayoutParameterResource {
     }
 }
 
+#[derive(Clone)]
 pub struct DeltaParameter {
-    pub current: Parameter,
-    pub previous: Parameter,
+    pub name: String,
+    pub current_value: ParameterValue,
+    pub previous_value: ParameterValue,
 }
 impl DeltaParameter {
-    pub fn check_changed(&self) -> bool {
-        self.current != self.previous
+    pub fn is_same_parameter(&self, parameter: &Parameter) -> bool {
+        self.name == parameter.name
     }
-    pub fn set_unchanged(&mut self) {
-        self.previous = self.current.clone();
+    pub fn is_same_parameter_value(&self, parameter: &Parameter) -> bool {
+        self.current_value == parameter.value
+    }
+    pub fn is_same(&self, parameter: &Parameter) -> bool {
+        self.is_same_parameter(parameter) && self.is_same_parameter_value(parameter)
+    }
+    pub fn overwrite_value(&mut self, parameter: &Parameter) {
+        self.current_value = parameter.value;
+        self.previous_value = parameter.value;
     }
 
-    /// Add UI element for this parameter using egui
-    #[cfg(feature = "visualizer")]
+    pub fn check_changed(&self) -> bool {
+        self.current_value != self.previous_value
+    }
+
+    pub fn set_unchanged(&mut self) {
+        self.previous_value = self.current_value;
+    }
+
     pub fn add_ui_element(&mut self, ui: &mut bevy_egui::egui::Ui) {
-        self.current.value.add_ui_element(ui);
+        self.current_value.add_ui_element(ui);
     }
 }
 impl From<Parameter> for DeltaParameter {
-    fn from(value: Parameter) -> Self {
+    fn from(parameter: Parameter) -> Self {
         Self {
-            current: value.clone(),
-            previous: value.clone(),
+            name: parameter.name,
+            current_value: parameter.value,
+            previous_value: parameter.value,
         }
     }
 }
 impl From<DeltaParameter> for Parameter {
-    fn from(value: DeltaParameter) -> Self {
-        value.current
+    fn from(parameter: DeltaParameter) -> Self {
+        Parameter {
+            name: parameter.name.clone(),
+            value: parameter.current_value,
+        }
     }
 }
-impl std::ops::Deref for DeltaParameter {
-    type Target = Parameter;
-
-    fn deref(&self) -> &Self::Target {
-        &self.current
+impl From<&DeltaParameter> for Parameter {
+    fn from(parameter: &DeltaParameter) -> Self {
+        Parameter {
+            name: parameter.name.clone(),
+            value: parameter.current_value,
+        }
     }
 }
-impl std::ops::DerefMut for DeltaParameter {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.current
+impl From<&mut DeltaParameter> for Parameter {
+    fn from(parameter: &mut DeltaParameter) -> Self {
+        Parameter {
+            name: parameter.name.clone(),
+            value: parameter.current_value,
+        }
     }
 }

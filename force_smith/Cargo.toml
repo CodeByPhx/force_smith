@@ -13,6 +13,7 @@ exclude = ["/target", "/.gitignore", "/.github", "/.idea", "tests/*"]
 
 [features]
 default = ["builder", "utils"]
+full = ["builder", "utils", "visualizer"]
 utils = []
 builder = []
 visualizer = ["bevy", "bevy_egui", "serde", "serde_json", "force_smith_macros"]

@@ -26,12 +26,10 @@ fn sync_parameters_from_layout(
 
     // Update the parameter resource if values changed in the layout
     for (resource_param, layout_param) in params.iter_mut().zip(current_params.iter()) {
-        if resource_param.name == layout_param.name {
-            // Check if the layout parameter is different (without triggering change detection)
-            if &resource_param.current.value != &layout_param.value {
-                resource_param.current.value = layout_param.value;
-                resource_param.previous.value = layout_param.value;
-            }
+        if resource_param.is_same_parameter(layout_param)
+            && !resource_param.is_same_parameter_value(layout_param)
+        {
+            resource_param.overwrite_value(layout_param);
         }
     }
 }

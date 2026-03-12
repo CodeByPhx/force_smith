@@ -10,12 +10,11 @@ pub struct RenderingConfig {
     pub node_movement_speed: f32,
     pub edge_width: f32,
     pub edge_color: GlobalColor,
-}
-
-impl Default for RenderingConfig {
-    fn default() -> Self {
-        VisualizerConfiguration::default().into()
-    }
+    pub force_arrow_color: GlobalColor,
+    pub final_force_arrow_color: GlobalColor,
+    pub arrow_shaft_width: f32,
+    pub arrow_tip_width: f32,
+    pub arrow_shaft_tip_ratio: f32,
 }
 
 impl From<VisualizerConfiguration> for RenderingConfig {
@@ -27,6 +26,11 @@ impl From<VisualizerConfiguration> for RenderingConfig {
             node_movement_speed: config.node_movement_speed,
             edge_width: config.edge_width,
             edge_color: config.edge_color,
+            force_arrow_color: config.force_arrow_color,
+            final_force_arrow_color: config.final_force_arrow_color,
+            arrow_shaft_width: config.arrow_shaft_width,
+            arrow_tip_width: config.arrow_tip_width,
+            arrow_shaft_tip_ratio: config.arrow_shaft_tip_ratio,
         }
     }
 }

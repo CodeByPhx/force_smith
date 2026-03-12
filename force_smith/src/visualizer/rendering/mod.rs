@@ -5,15 +5,15 @@ use crate::{
     visualizer::{
         global_assets::{GlobalColorAsset, GlobalShapeAssets},
         global_schedule::VisualizerStates,
+        interface::visualizer_control::SmoothMovementSetting,
         rendering::{
             bundles::{
-                Destination, EdgeBundle, EdgeIndices, EdgeMarker, GraphEntitySelector, Index,
-                NodeBundle, NodeMarker, calculate_unit_rectangle_transform,
+                Destination, EdgeBundle, EdgeIndices, EdgeMarker, Index, NodeBundle, NodeMarker,
+                calculate_unit_rectangle_transform,
             },
             config::RenderingConfig,
         },
         simulation::resource::at_least_one_message,
-        interface::visualizer_control::SmoothMovementSetting,
     },
 };
 
@@ -41,9 +41,10 @@ impl Plugin for RenderingPlugin {
     }
 }
 
+type ExclusiveEdgeSelector = (With<EdgeMarker>, Without<NodeMarker>);
 fn redraw_edges(
     nodes: Query<(&Index, &Transform), With<NodeMarker>>,
-    mut edges: Query<(&EdgeIndices, &mut Transform), (With<EdgeMarker>, Without<NodeMarker>)>,
+    mut edges: Query<(&EdgeIndices, &mut Transform), ExclusiveEdgeSelector>,
     config: Res<RenderingConfig>,
 ) {
     let mut node_positions: Vec<(usize, Vec3)> = nodes
@@ -67,6 +68,7 @@ pub struct SetInitialGraph {
     pub edges: Vec<Edge>,
 }
 
+type GraphEntitySelector = Or<(With<NodeMarker>, With<EdgeMarker>)>;
 fn set_initial_graph(
     mut set_initial_graph: MessageReader<SetInitialGraph>,
     mut commands: Commands,
@@ -126,15 +128,8 @@ fn move_nodes(
         let target_pos = destination.extend(0.0);
 
         if smooth_movement.enabled {
-            // Smooth interpolation
             let direction = target_pos - current_pos;
             let distance = direction.length();
-
-            if distance == 0.0 {
-                // Already at destination
-                commands.entity(entity).remove::<Destination>();
-                continue;
-            }
 
             let movement_amount = config.node_movement_speed * time.delta_secs();
 

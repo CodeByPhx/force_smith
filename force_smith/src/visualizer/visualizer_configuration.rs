@@ -27,6 +27,16 @@ pub struct VisualizerConfiguration {
     pub edge_width: f32,
     /// Color of edges
     pub edge_color: GlobalColor,
+    /// Color of force arrows
+    pub force_arrow_color: GlobalColor,
+    /// Color of final force arrows
+    pub final_force_arrow_color: GlobalColor,
+    /// Width of arrows shafts in pixels
+    pub arrow_shaft_width: f32,
+    /// Width of arrows tips in pixels
+    pub arrow_tip_width: f32,
+    /// Ratio of arrow shaft length to its tip
+    pub arrow_shaft_tip_ratio: f32,
 
     // === Initial Mode ===
     /// Which mode to start in (Normal or Debug)
@@ -56,6 +66,11 @@ impl Default for VisualizerConfiguration {
             // Initial mode defaults
             initial_mode: VisualizerMode::Normal,
             smooth_movement_enabled: true,
+            force_arrow_color: GlobalColor::Red,
+            final_force_arrow_color: GlobalColor::Green,
+            arrow_shaft_width: 2.0,
+            arrow_tip_width: 2.0 * 10.0,
+            arrow_shaft_tip_ratio: 0.9,
         }
     }
 }

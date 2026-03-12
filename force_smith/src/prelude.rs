@@ -17,6 +17,5 @@ pub use crate::visualizer::{
     visualizer_configuration::VisualizerMode,
 };
 
-// Re-export the Parameterized derive macro
 #[cfg(feature = "visualizer")]
 pub use force_smith_macros::Parameterized;

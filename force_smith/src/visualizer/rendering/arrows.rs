@@ -1,15 +1,22 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 
-use crate::visualizer::{
-    global_schedule::{DebugExecutionState, VisualizerMode, VisualizerStates},
-    rendering::bundles::{ArrowMarker, Index, NodeMarker},
-    simulation::debug::DebugVisualizationData,
+use crate::{
+    prelude::GlobalColor,
+    visualizer::{
+        global_assets::{GlobalColorAsset, GlobalShapeAssets},
+        global_schedule::{DebugExecutionState, VisualizerMode, VisualizerStates},
+        rendering::{
+            bundles::{ArrowMarker, Index, NodeMarker},
+            config::RenderingConfig,
+        },
+        simulation::debug::DebugVisualizationData,
+    },
 };
 
 pub struct ArrowsPlugin;
 impl Plugin for ArrowsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_arrow_assets).add_systems(
+        app.add_systems(
             Update,
             debug_show_forces
                 .run_if(in_state(VisualizerMode::Debug))
@@ -19,61 +26,18 @@ impl Plugin for ArrowsPlugin {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-pub enum ArrowColor {
-    Red,
-    Green,
-}
-
-impl ArrowColor {
-    pub const ALL: [Self; 2] = [Self::Red, Self::Green];
-
-    fn to_color(self) -> Color {
-        match self {
-            ArrowColor::Red => Color::srgb(1.0, 0.0, 0.0),
-            ArrowColor::Green => Color::srgb(0.0, 1.0, 0.0),
-        }
-    }
-}
-
-#[derive(Resource)]
-pub struct ArrowAssets {
-    shaft_unit_mesh: Handle<Mesh>,
-    tip_unit_mesh: Handle<Mesh>,
-    materials: HashMap<ArrowColor, Handle<ColorMaterial>>,
-}
-
-fn setup_arrow_assets(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    commands.insert_resource(ArrowAssets {
-        shaft_unit_mesh: meshes.add(Rectangle::new(1.0, 1.0)),
-        tip_unit_mesh: meshes.add(Triangle2d::new(
-            Vec2::new(1.0, 0.0),
-            Vec2::new(-1.0, -1.0),
-            Vec2::new(-1.0, 1.0),
-        )),
-        materials: ArrowColor::ALL
-            .iter()
-            .map(|c| (*c, materials.add(c.to_color())))
-            .collect(),
-    });
-}
-
 /// Show force vectors and destination arrows in debug mode
 fn debug_show_forces(
     nodes: Query<(&Index, &Transform), With<NodeMarker>>,
     mut commands: Commands,
-    arrow_assets: Res<ArrowAssets>,
+    global_meshes: Res<GlobalShapeAssets>,
+    global_colors: Res<GlobalColorAsset>,
+    config: Res<RenderingConfig>,
     debug_data: Res<DebugVisualizationData>,
     mut next_state: ResMut<NextState<DebugExecutionState>>,
 ) {
     for (&Index(idx), transform) in nodes.iter() {
         let origin = transform.translation;
-        let shaft_thickness = 2.0;
-        let tip_thickness = shaft_thickness * 10.0;
 
         // Draw force vectors in red
         for force_layer in &debug_data.forces {
@@ -81,13 +45,14 @@ fn debug_show_forces(
             let end = origin + displacement;
             draw_arrow2d(
                 &mut commands,
-                &arrow_assets,
+                &global_meshes,
+                &global_colors,
                 origin,
                 end,
-                shaft_thickness,
-                tip_thickness,
-                ArrowColor::Red,
-                0.9,
+                config.arrow_shaft_width,
+                config.arrow_tip_width,
+                config.force_arrow_color,
+                config.arrow_shaft_tip_ratio,
             );
         }
 
@@ -95,13 +60,14 @@ fn debug_show_forces(
         let destination = debug_data.destinations[idx].extend(0.0);
         draw_arrow2d(
             &mut commands,
-            &arrow_assets,
+            &global_meshes,
+            &global_colors,
             origin,
             destination,
-            shaft_thickness,
-            tip_thickness,
-            ArrowColor::Green,
-            0.9,
+            config.arrow_shaft_width,
+            config.arrow_tip_width,
+            config.final_force_arrow_color,
+            config.arrow_shaft_tip_ratio,
         );
     }
 
@@ -112,55 +78,58 @@ fn debug_show_forces(
 #[allow(clippy::too_many_arguments)]
 fn draw_arrow2d(
     commands: &mut Commands,
-    arrow_assets: &ArrowAssets,
+    global_meshes: &Res<GlobalShapeAssets>,
+    global_colors: &Res<GlobalColorAsset>,
     start: Vec3,
     end: Vec3,
     shaft_thickness: f32,
     tip_thickness: f32,
-    color: ArrowColor,
+    color: GlobalColor,
     shaft_tip_ratio: f32,
 ) {
+    let Some(color_handle) = global_colors.get(&color) else {
+        return;
+    };
+
     let direction = end - start;
     let shaft_start = start;
     let shaft_end = start + direction * shaft_tip_ratio;
     let tip_start = shaft_end;
     let tip_end = end;
 
-    draw_arrow_shaft(
+    draw_arrow_shaft2d(
         commands,
-        arrow_assets,
+        &global_meshes.unit_rectangle,
+        color_handle,
         shaft_start,
         shaft_end,
         shaft_thickness,
-        color,
     );
-    draw_arrow_tip(
+    draw_arrow_tip2d(
         commands,
-        arrow_assets,
+        &global_meshes.unit_triangle,
+        color_handle,
         tip_start,
         tip_end,
         tip_thickness,
-        color,
     );
 }
 
-fn draw_arrow_shaft(
+fn draw_arrow_shaft2d(
     commands: &mut Commands,
-    arrow_assets: &ArrowAssets,
+    unit_rectangle_mesh: &Handle<Mesh>,
+    color_material: &Handle<ColorMaterial>,
     start: Vec3,
     end: Vec3,
     thickness: f32,
-    color: ArrowColor,
 ) {
     let direction = end - start;
     let midpoint = start + direction / 2.0;
     let angle = direction.truncate().to_angle();
-    let mesh = arrow_assets.shaft_unit_mesh.clone();
-    let material = arrow_assets.materials.get(&color).unwrap().clone();
 
     commands.spawn((
-        Mesh2d(mesh),
-        MeshMaterial2d(material),
+        Mesh2d(unit_rectangle_mesh.clone()),
+        MeshMaterial2d(color_material.clone()),
         ArrowMarker,
         Transform {
             translation: midpoint,
@@ -170,13 +139,13 @@ fn draw_arrow_shaft(
     ));
 }
 
-fn draw_arrow_tip(
+fn draw_arrow_tip2d(
     commands: &mut Commands,
-    arrow_assets: &ArrowAssets,
+    unit_triangle_mesh: &Handle<Mesh>,
+    color_material: &Handle<ColorMaterial>,
     start: Vec3,
     end: Vec3,
     thickness: f32,
-    color: ArrowColor,
 ) {
     let start2d = start.truncate();
     let end2d = end.truncate();
@@ -188,12 +157,10 @@ fn draw_arrow_tip(
     }
 
     let angle = dir.to_angle();
-    let mesh = arrow_assets.tip_unit_mesh.clone();
-    let material = arrow_assets.materials.get(&color).unwrap().clone();
 
     commands.spawn((
-        Mesh2d(mesh),
-        MeshMaterial2d(material),
+        Mesh2d(unit_triangle_mesh.clone()),
+        MeshMaterial2d(color_material.clone()),
         Transform {
             translation: Vec3::new(end.x, end.y, start.z),
             rotation: Quat::from_rotation_z(angle),

@@ -1,11 +1,13 @@
-use std::time::Duration;
-
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
+use std::time::Duration;
 
 use crate::{
     graph::{Edge, Graph},
-    visualizer::{global_schedule::VisualizerStates, simulation::resource::LoadGraph, interface::helpers::up_down_arrow_buttons_usize},
+    visualizer::{
+        global_schedule::VisualizerStates, interface::helpers::up_down_arrow_buttons_usize,
+        simulation::resource::LoadGraph,
+    },
 };
 
 pub struct GraphSourceUI;
@@ -65,7 +67,7 @@ impl Default for GraphFromConfig {
         Self {
             vertices: 2,
             edges: 1,
-            connected: false,
+            connected: true,
         }
     }
 }
@@ -276,10 +278,9 @@ fn generate_graph(
 
         // Check for duplicate edges (optional, for simple graphs)
         let edge = Edge { from, to };
-        if !graph_edges
-            .iter()
-            .any(|e| (e.from == edge.from && e.to == edge.to) || (e.from == edge.to && e.to == edge.from))
-        {
+        if !graph_edges.iter().any(|e| {
+            (e.from == edge.from && e.to == edge.to) || (e.from == edge.to && e.to == edge.from)
+        }) {
             graph_edges.push(edge);
         }
     }

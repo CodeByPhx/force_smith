@@ -5,8 +5,7 @@ use bevy::{
 use bevy_egui::EguiContexts;
 
 use crate::visualizer::{
-    rendering::config::RenderingConfig,
-    visualizer_configuration::VisualizerConfiguration,
+    rendering::config::RenderingConfig, visualizer_configuration::VisualizerConfiguration,
 };
 
 pub struct CameraPlugin;
@@ -54,7 +53,7 @@ fn set_background_color(config: Res<RenderingConfig>, mut commands: Commands) {
     commands.insert_resource(ClearColor(config.background_color.to_color()));
 }
 
-/// Handle keyboard movement (vim-style: hjkl)
+/// Handle keyboard movement (vim-style: hjkl + arrows)
 fn camera_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -94,7 +93,6 @@ fn camera_movement(
 
         if direction.length() > 0.0 {
             direction = direction.normalize();
-            // Scale movement by current zoom level
             let zoom_factor = transform.scale.x;
             transform.translation +=
                 direction * camera_config.keyboard_speed * time.delta_secs() * zoom_factor;
@@ -158,13 +156,12 @@ fn camera_pan(
     mut query: Query<&mut Transform, With<Camera2d>>,
     mut egui_contexts: EguiContexts,
 ) {
-    // Check if mouse is over any egui UI
-    if let Ok(ctx) = egui_contexts.ctx_mut() {
-        if ctx.is_pointer_over_area() {
-            // Clear motion events when mouse is over UI
-            mouse_motion.clear();
-            return;
-        }
+    // If mouse is over any egui UI, clear motion
+    if let Ok(ctx) = egui_contexts.ctx_mut()
+        && ctx.is_pointer_over_area()
+    {
+        mouse_motion.clear();
+        return;
     }
 
     // Pan with left mouse button only

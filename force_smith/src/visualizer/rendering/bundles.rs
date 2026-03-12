@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-pub type GraphEntitySelector = Or<(With<NodeMarker>, With<EdgeMarker>)>;
-
 #[derive(Bundle)]
 pub struct NodeBundle {
     pub marker: NodeMarker,

@@ -9,12 +9,6 @@ pub struct SimulationConfig {
     pub smooth_movement_enabled: bool,
 }
 
-impl Default for SimulationConfig {
-    fn default() -> Self {
-        VisualizerConfiguration::default().into()
-    }
-}
-
 impl From<VisualizerConfiguration> for SimulationConfig {
     fn from(config: VisualizerConfiguration) -> Self {
         Self {
