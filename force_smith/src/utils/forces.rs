@@ -1,5 +1,4 @@
-use crate::layout::types::{Displacements, ForceFn, Position, ToVertexPair};
-use bevy_math::Vec2;
+use crate::prelude::*;
 
 pub fn linear_repulsion_applicator<Vertex, Edge, Context>(
     vertices: &[Vertex],
@@ -25,6 +24,12 @@ impl ToIndexPair for (usize, usize) {
         *self
     }
 }
+impl ToIndexPair for Edge {
+    fn to_index_pair(&self) -> (usize, usize) {
+        (self.from, self.to)
+    }
+}
+
 pub fn linear_attraction_applicator<Vertex, Edge, Context>(
     vertices: &[Vertex],
     edges: &[Edge],
@@ -42,20 +47,14 @@ pub fn linear_attraction_applicator<Vertex, Edge, Context>(
     }
 }
 
-pub trait PositionMut {
-    fn position_mut(&mut self) -> &mut Vec2;
-}
-impl PositionMut for Vec2 {
-    fn position_mut(&mut self) -> &mut Vec2 {
-        self
-    }
-}
-pub fn linear_position_update<Vertex: Position, Context>(
+pub fn linear_position_update<Vertex, Context>(
     displacements: &Displacements,
     vertices: &mut [Vertex],
     _: &mut Context,
-) {
+) where
+    Vertex: AsVec2,
+{
     for idx in 0..vertices.len() {
-        *vertices[idx].vec2_as_ref_mut() += displacements[idx];
+        *vertices[idx].as_ref_mut_vec2() += displacements[idx];
     }
 }

@@ -7,10 +7,10 @@ use visualizer_control::VisualizerControlUI;
 mod config;
 mod graph_source;
 mod helpers;
-mod visualizer_control;
+pub mod visualizer_control;
 
-pub struct UIPlugin;
-impl Plugin for UIPlugin {
+pub struct InterfacePlugin;
+impl Plugin for InterfacePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
             .add_plugins(ConfigUI)
