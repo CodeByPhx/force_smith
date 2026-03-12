@@ -1,6 +1,6 @@
 [package]
 name = "force_smith"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 authors = ["CodeByPhx <CodeByPhx@proton.me>"]
 description = "A toolkit for implementing and developing force-directed layout algorithms with built-in debugging and visualization capabilities."

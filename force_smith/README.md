@@ -18,10 +18,10 @@ Add Force Smith to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-force_smith = "1.0.1"
+force_smith = "1.0.2"
 
 # For full features
-force_smith = { version = "1.0.1", features = ["full"] }
+force_smith = { version = "1.0.2", features = ["full"] }
 ```
 
 ### Basic Usage
@@ -29,20 +29,30 @@ force_smith = { version = "1.0.1", features = ["full"] }
 ```rust
 use force_smith::prelude::*;
 
-// Build a layout algorithm
-let layout = LayoutBuilder::new()
-    .add_force(linear_attraction_applicator)
-    .add_force(linear_repulsion_applicator)
-    .with_parameter("temperature", 1.0)
-    .with_parameter("ideal_edge_length", 100.0)
-    .with_parameter("cooling_rate", 0.05)
-    .build();
+#[derive(Default, Parameterized)]
+pub struct Context {
+  #[parameter(name="Special Name")]
+  param1: f32,
+  #[parameter]
+  param2: bool
+}
 
-// Run with visualization
-visualize_dbg(
-    layout,
-    VisualizerConfiguration::default()
-);
+fn main() {
+  let layout = LayoutBuilder::build()
+    .with_context_type::<Context>()
+    .with_graph_loading_fn(your_graph_loading_fn)
+    .with_force(Force {
+      force_fn: your_force_fn,
+      applicator_fn: your_applicator_fn
+    })
+    .with_force(Force {
+      force_fn: your_force_fn2,
+      applicator_fn: your_applicator_fn2
+    })
+    .with_position_update_fn(your_position_update_fn)
+    .to_layout();
+  visualize_dbg(Box::from(layout), VisualizerConfiguration::default());
+}
 ```
 
 ## Features
