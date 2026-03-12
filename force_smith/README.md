@@ -18,10 +18,10 @@ Add Force Smith to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-force_smith = "1.0.0"
+force_smith = "1.0.1"
 
 # For full features
-force_smith = { version = "1.0.0", features = ["full"] }
+force_smith = { version = "1.0.1", features = ["full"] }
 ```
 
 ### Basic Usage
@@ -298,7 +298,7 @@ You can also create custom applicators for specific layouts (e.g., hierarchical,
 
 ```rust
 LayoutBuilder::build()
-    .with_context_type::<YourConfig>()           // Set configuration type
+    .with_context_type::<YourContext>()           // Set configuration type
     .with_graph_loading_fn(|graph, ctx| {...})   // Load and initialize graph
     .with_position_update_fn(|disp, vert, ctx| {...}) // Update positions
     .with_force(Force { force_fn, applicator_fn }) // Add force calculations

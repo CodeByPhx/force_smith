@@ -97,7 +97,7 @@ This example demonstrates:
 
 ## Requirements
 
-This crate is designed to work with Force Smith 0.1+ and requires the `visualizer` feature to be enabled.
+This crate is designed to work with Force Smith 1.0+ and requires the `visualizer` feature to be enabled.
 
 ## Integration
 
