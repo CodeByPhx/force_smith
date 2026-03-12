@@ -18,10 +18,10 @@ Add Force Smith to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-force_smith = "0.1"
+force_smith = "1.0.0"
 
-# For visualization features
-force_smith = { version = "0.1", features = ["visualizer"] }
+# For full features
+force_smith = { version = "1.0.0", features = ["full"] }
 ```
 
 ### Basic Usage
