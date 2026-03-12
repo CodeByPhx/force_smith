@@ -2605,12 +2605,12 @@ dependencies = [
 
 [[package]]
 name = "force_smith"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bevy",
  "bevy_egui",
  "bevy_math",
- "force_smith_macros 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "force_smith_macros 1.0.0",
  "rand 0.10.0",
  "serde",
  "serde_json",
@@ -2619,6 +2619,8 @@ dependencies = [
 [[package]]
 name = "force_smith_macros"
 version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9718e2d6f9cea4a2cc2514cc5a70f2cc09b5ad91806709c0e25430bb50a8b2e9"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2627,9 +2629,7 @@ dependencies = [
 
 [[package]]
 name = "force_smith_macros"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9718e2d6f9cea4a2cc2514cc5a70f2cc09b5ad91806709c0e25430bb50a8b2e9"
+version = "1.0.2"
 dependencies = [
  "proc-macro2",
  "quote",

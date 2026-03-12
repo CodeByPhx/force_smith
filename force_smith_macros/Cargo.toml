@@ -1,6 +1,6 @@
 [package]
 name = "force_smith_macros"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 authors = ["CodeByPhx CodeByPhx@proton.me"]
 description = "force_smith_macros is the utility crate for force_smith."
