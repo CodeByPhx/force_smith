@@ -5,6 +5,7 @@ use crate::graph::{Graph, SpecializedGraph};
 pub type GraphLoadingFn<Vertex, Edge, Context> =
     fn(graph: &Graph, ctx: &mut Context) -> SpecializedGraph<Vertex, Edge>;
 
+#[derive(Clone)]
 pub struct Displacements(pub Vec<Vec2>);
 impl From<Vec<Vec2>> for Displacements {
     fn from(value: Vec<Vec2>) -> Self {
@@ -48,6 +49,7 @@ impl<'a, Vertex> ToVertexPair<'a, Vertex> for &[Vertex] {
     }
 }
 
+#[derive(Clone)]
 pub struct Force<Vertex, Edge, Context> {
     pub force_fn: ForceFn<Vertex, Context>,
     pub applicator_fn: ApplicatorFn<Vertex, Edge, Context>,

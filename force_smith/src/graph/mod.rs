@@ -14,6 +14,7 @@ pub struct Edge {
     pub to: usize,
 }
 
+#[derive(Clone)]
 pub struct SpecializedGraph<Vertex, Edge> {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,

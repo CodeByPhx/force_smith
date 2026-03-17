@@ -3,6 +3,7 @@ use crate::prelude::*;
 #[cfg(feature = "visualizer")]
 mod visualizer_integration;
 
+#[derive(Clone)]
 pub struct LayoutEngine<Vertex, Edge, Context> {
     graph: SpecializedGraph<Vertex, Edge>,
     graph_loading_fn: GraphLoadingFn<Vertex, Edge, Context>,
