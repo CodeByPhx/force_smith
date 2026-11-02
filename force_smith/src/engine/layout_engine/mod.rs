@@ -11,6 +11,8 @@ pub struct LayoutEngine<Vertex, Edge, Context> {
     forces: Vec<Force<Vertex, Edge, Context>>,
     displacements: Displacements,
     position_update_fn: PositionUpdateFn<Vertex, Context>,
+    converged: bool,
+    converged_check_fn: ConvergedCheckFn<Context>,
 }
 impl<Vertex, Edge, Context> LayoutEngine<Vertex, Edge, Context>
 where
@@ -20,6 +22,7 @@ where
         graph_loading_fn: GraphLoadingFn<Vertex, Edge, Context>,
         forces: Vec<Force<Vertex, Edge, Context>>,
         position_update_fn: PositionUpdateFn<Vertex, Context>,
+        converged_check_fn: ConvergedCheckFn<Context>,
     ) -> Self {
         let mut ctx = Context::default();
         let graph = Graph::default();
@@ -30,6 +33,8 @@ where
             forces,
             displacements: vec![Vec2::ZERO; graph.vertices].into(),
             position_update_fn,
+            converged_check_fn,
+            converged: false,
         }
     }
 }
@@ -60,6 +65,11 @@ where
             &mut self.graph.vertices,
             &mut self.context,
         );
+        self.converged = (self.converged_check_fn)(&self.context);
+    }
+
+    fn converged(&self) -> bool {
+        self.converged
     }
 
     fn get_positions(&self) -> Vec<bevy_math::Vec2> {

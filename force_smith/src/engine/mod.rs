@@ -9,6 +9,7 @@ pub trait LayoutAlgorithm {
     fn load_graph(&mut self, graph: &Graph);
     fn iterate(&mut self);
     fn get_positions(&self) -> Vec<Vec2>;
+    fn converged(&self) -> bool;
     fn get_edges(&self) -> Vec<Edge>;
 }
 

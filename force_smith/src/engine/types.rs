@@ -77,3 +77,5 @@ pub type ApplicatorFn<Vertex, Edge, Context> = fn(
 
 pub type PositionUpdateFn<Vertex, Context> =
     fn(displacements: &Displacements, vertices: &mut [Vertex], context: &mut Context);
+
+pub type ConvergedCheckFn<Context> = fn(context: &Context) -> bool;

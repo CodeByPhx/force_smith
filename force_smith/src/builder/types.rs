@@ -1,4 +1,4 @@
-use crate::engine::types::{GraphLoadingFn, PositionUpdateFn};
+use crate::engine::types::{ConvergedCheckFn, GraphLoadingFn, PositionUpdateFn};
 
 pub struct NoneGraphLoadingFn;
 pub struct SomeGraphLoadingFn<Vertex, Edge, Context>(pub GraphLoadingFn<Vertex, Edge, Context>);
@@ -16,6 +16,14 @@ impl<Vertex, Context> From<PositionUpdateFn<Vertex, Context>>
     for SomePositionUpdateFn<Vertex, Context>
 {
     fn from(value: PositionUpdateFn<Vertex, Context>) -> Self {
+        Self(value)
+    }
+}
+
+pub struct NoneConvergedCheckFn;
+pub struct SomeConvergedCheckFn<Context>(pub ConvergedCheckFn<Context>);
+impl<Context> From<ConvergedCheckFn<Context>> for SomeConvergedCheckFn<Context> {
+    fn from(value: ConvergedCheckFn<Context>) -> Self {
         Self(value)
     }
 }

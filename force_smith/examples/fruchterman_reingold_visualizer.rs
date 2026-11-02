@@ -76,6 +76,7 @@ fn main() {
             },
             applicator_fn: linear_repulsion_applicator,
         })
+        .with_converged_check_fn(|ctx| ctx.temperature == 0.0)
         .to_layout();
 
     // Customize visualizer appearance
