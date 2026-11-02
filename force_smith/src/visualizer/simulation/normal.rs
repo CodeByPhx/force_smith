@@ -12,6 +12,11 @@ impl Plugin for NormalModePlugin {
         app.add_systems(
             Update,
             (
+                // Check convergence before iteration
+                check_convergence
+                    .run_if(in_state(VisualizerMode::Normal))
+                    .run_if(in_state(NormalExecutionState::Running))
+                    .in_set(VisualizerStates::BeforeIteration),
                 // Run iteration when Running
                 (iterate_layout, attach_destinations)
                     .chain()
@@ -25,6 +30,16 @@ impl Plugin for NormalModePlugin {
                     .in_set(VisualizerStates::AfterIteration),
             ),
         );
+    }
+}
+
+fn check_convergence(
+    layout: NonSend<LayoutResource>,
+    mut next_state: ResMut<NextState<NormalExecutionState>>,
+) {
+    if layout.converged() {
+        info!("Layout has converged - automatically stopping");
+        next_state.set(NormalExecutionState::Stopped);
     }
 }
 

@@ -4,7 +4,7 @@ use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
 use crate::visualizer::{
     global_schedule::{DebugExecutionState, NormalExecutionState, VisualizerMode},
-    simulation::config::SimulationConfig,
+    simulation::{config::SimulationConfig, resource::LayoutResource},
 };
 
 pub struct VisualizerControlUI;
@@ -63,10 +63,14 @@ fn visualizer_control_ui(
     mut contexts: EguiContexts,
     mut states: VisualizerStates,
     mut smooth_movement: ResMut<SmoothMovementSetting>,
+    layout: Option<NonSend<LayoutResource>>,
 ) {
     let Ok(context) = contexts.ctx_mut() else {
         return;
     };
+
+    // Check convergence status if layout exists
+    let is_converged = layout.as_ref().map(|l| l.converged()).unwrap_or(false);
 
     egui::Window::new("Layout Controls").show(context, |ui| {
         ui.vertical(|ui| {
@@ -92,6 +96,13 @@ fn visualizer_control_ui(
             ui.checkbox(&mut smooth_movement.enabled, "Smooth Movement")
                 .on_hover_text("When enabled, nodes smoothly interpolate to destinations.\nWhen disabled, nodes snap instantly.");
 
+            // Convergence status display
+            if is_converged {
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("✓ Converged").color(egui::Color32::GREEN).strong());
+                });
+            } 
             ui.separator();
 
             match states.mode.get() {

@@ -53,6 +53,12 @@ fn dbg_iterate_layout(
     mut debug_data: ResMut<DebugVisualizationData>,
     mut next_state: ResMut<NextState<DebugExecutionState>>,
 ) {
+    // Check convergence before iteration
+    if layout.converged() {
+        info!("Debug mode: Layout has converged");
+        next_state.set(DebugExecutionState::Stopped);
+    }
+
     let forces = layout.dbg_iterate();
     let destinations = layout.get_positions();
 
