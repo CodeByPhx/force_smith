@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::visualizer::{simulation::config::SimulationConfig, visualizer_configuration::VisualizerMode as ConfigVisualizerMode};
+use crate::visualizer::{
+    simulation::config::SimulationConfig,
+    visualizer_configuration::VisualizerMode as ConfigVisualizerMode,
+};
 
 pub struct VisualizerSchedulePlugin;
 impl Plugin for VisualizerSchedulePlugin {

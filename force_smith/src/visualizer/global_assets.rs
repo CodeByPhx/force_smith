@@ -82,23 +82,23 @@ impl GlobalColor {
     pub fn to_color(self) -> Color {
         match self {
             // Softer, more muted primary colors
-            GlobalColor::Red => Color::srgb(0.85, 0.35, 0.35),        // Soft red
-            GlobalColor::Green => Color::srgb(0.4, 0.85, 0.5),        // Soft green
-            GlobalColor::Blue => Color::srgb(0.4, 0.65, 0.95),        // Soft blue
+            GlobalColor::Red => Color::srgb(0.85, 0.35, 0.35), // Soft red
+            GlobalColor::Green => Color::srgb(0.4, 0.85, 0.5), // Soft green
+            GlobalColor::Blue => Color::srgb(0.4, 0.65, 0.95), // Soft blue
 
             // Accent colors
-            GlobalColor::Orange => Color::srgb(0.95, 0.65, 0.35),     // Warm orange
-            GlobalColor::Purple => Color::srgb(0.75, 0.5, 0.95),      // Soft purple
-            GlobalColor::Cyan => Color::srgb(0.4, 0.85, 0.85),        // Bright cyan
-            GlobalColor::Pink => Color::srgb(0.95, 0.55, 0.75),       // Soft pink
-            GlobalColor::Yellow => Color::srgb(0.95, 0.9, 0.45),      // Warm yellow
+            GlobalColor::Orange => Color::srgb(0.95, 0.65, 0.35), // Warm orange
+            GlobalColor::Purple => Color::srgb(0.75, 0.5, 0.95),  // Soft purple
+            GlobalColor::Cyan => Color::srgb(0.4, 0.85, 0.85),    // Bright cyan
+            GlobalColor::Pink => Color::srgb(0.95, 0.55, 0.75),   // Soft pink
+            GlobalColor::Yellow => Color::srgb(0.95, 0.9, 0.45),  // Warm yellow
 
             // Neutrals
-            GlobalColor::White => Color::srgb(0.95, 0.95, 0.95),      // Off-white
-            GlobalColor::LightGrey => Color::srgb(0.75, 0.75, 0.75),  // Light grey
-            GlobalColor::Grey => Color::srgb(0.5, 0.5, 0.5),          // Medium grey
-            GlobalColor::DarkGrey => Color::srgb(0.25, 0.25, 0.25),   // Dark grey
-            GlobalColor::Black => Color::srgb(0.1, 0.1, 0.1),         // Near-black
+            GlobalColor::White => Color::srgb(0.95, 0.95, 0.95), // Off-white
+            GlobalColor::LightGrey => Color::srgb(0.75, 0.75, 0.75), // Light grey
+            GlobalColor::Grey => Color::srgb(0.5, 0.5, 0.5),     // Medium grey
+            GlobalColor::DarkGrey => Color::srgb(0.25, 0.25, 0.25), // Dark grey
+            GlobalColor::Black => Color::srgb(0.1, 0.1, 0.1),    // Near-black
         }
     }
 }

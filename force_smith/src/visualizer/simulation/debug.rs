@@ -9,24 +9,23 @@ use crate::visualizer::{
 pub struct DebugModePlugin;
 impl Plugin for DebugModePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<DebugVisualizationData>()
-            .add_systems(
-                Update,
-                (
-                    // Computing state: snap nodes to destinations, then run layout iteration
-                    (snap_nodes_to_destinations, dbg_iterate_layout)
-                        .chain()
-                        .run_if(in_state(VisualizerMode::Debug))
-                        .run_if(in_state(DebugExecutionState::Computing))
-                        .in_set(VisualizerStates::Iteration),
-                    // RemovingForces state: clean up arrow entities, attach destinations
-                    (debug_remove_forces, attach_destinations)
-                        .chain()
-                        .run_if(in_state(VisualizerMode::Debug))
-                        .run_if(in_state(DebugExecutionState::RemovingForces))
-                        .in_set(VisualizerStates::AfterIteration),
-                ),
-            );
+        app.init_resource::<DebugVisualizationData>().add_systems(
+            Update,
+            (
+                // Computing state: snap nodes to destinations, then run layout iteration
+                (snap_nodes_to_destinations, dbg_iterate_layout)
+                    .chain()
+                    .run_if(in_state(VisualizerMode::Debug))
+                    .run_if(in_state(DebugExecutionState::Computing))
+                    .in_set(VisualizerStates::Iteration),
+                // RemovingForces state: clean up arrow entities, attach destinations
+                (debug_remove_forces, attach_destinations)
+                    .chain()
+                    .run_if(in_state(VisualizerMode::Debug))
+                    .run_if(in_state(DebugExecutionState::RemovingForces))
+                    .in_set(VisualizerStates::AfterIteration),
+            ),
+        );
     }
 }
 
@@ -71,7 +70,10 @@ fn attach_destinations(
     mut commands: Commands,
 ) {
     let positions = layout.get_positions();
-    info!("Debug: Attaching destinations to {} nodes for smooth movement", nodes.iter().count());
+    info!(
+        "Debug: Attaching destinations to {} nodes for smooth movement",
+        nodes.iter().count()
+    );
     for (&Index(idx), entity) in nodes.iter() {
         if let Some(&position) = positions.get(idx) {
             commands.entity(entity).insert(Destination(position));

@@ -1,23 +1,23 @@
 use crate::visualizer::{
     camera::CameraConfig,
+    layout_trait::ParameterizedDebugLayoutAlgorithm,
     rendering::config::RenderingConfig,
     simulation::{
         config::SimulationConfig,
         resource::{LayoutParameterResource, LayoutResource},
     },
-    layout_trait::ParameterizedDebugLayoutAlgorithm,
     visualizer_configuration::VisualizerConfiguration,
 };
 use bevy::prelude::*;
 
+mod camera;
 pub mod global_assets;
 pub mod global_schedule;
+mod interface;
+pub mod layout_trait;
 mod rendering;
 mod simulation;
-pub mod layout_trait;
-mod interface;
 pub mod visualizer_configuration;
-mod camera;
 
 pub fn visualize_dbg(
     layout: Box<dyn ParameterizedDebugLayoutAlgorithm>,
