@@ -2605,7 +2605,7 @@ dependencies = [
 
 [[package]]
 name = "force_smith"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "bevy",
  "bevy_egui",
