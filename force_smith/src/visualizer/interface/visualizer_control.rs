@@ -102,7 +102,7 @@ fn visualizer_control_ui(
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new("✓ Converged").color(egui::Color32::GREEN).strong());
                 });
-            } 
+            }
             ui.separator();
 
             match states.mode.get() {
